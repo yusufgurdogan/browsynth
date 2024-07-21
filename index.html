@@ -22,11 +22,13 @@
             border-radius: 10px;
             padding: 20px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            max-width: 900px;
+            width: 100%;
         }
 
         #controls {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -75,24 +77,26 @@
         #piano {
             display: flex;
             background-color: #333;
-            padding: 20px;
+            padding: 10px;
             border-radius: 10px;
+            overflow-x: auto;
+            margin-bottom: 20px;
         }
 
         .key {
-            width: 40px;
-            height: 160px;
+            width: 30px;
+            height: 120px;
             background-color: white;
             border: 1px solid #000;
-            margin: 0 2px;
+            margin: 0 1px;
             cursor: pointer;
         }
 
         .key.black {
-            width: 24px;
-            height: 100px;
+            width: 20px;
+            height: 80px;
             background-color: black;
-            margin: 0 -12px;
+            margin: 0 -10px;
             z-index: 1;
             position: relative;
         }
@@ -102,7 +106,8 @@
         }
 
         #visualizer {
-            margin-top: 20px;
+            width: 100%;
+            height: 100px;
             border: 1px solid #4a4a4a;
             border-radius: 5px;
         }
@@ -152,7 +157,7 @@
             </div>
         </div>
         <div id="piano"></div>
-        <canvas id="visualizer" width="800" height="200"></canvas>
+        <canvas id="visualizer"></canvas>
     </div>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -173,9 +178,7 @@
         const visualizer = document.getElementById('visualizer');
         const visualizerContext = visualizer.getContext('2d');
 
-        let activeOscillators = {};
-        let activeGainNodes = {};
-        let activeFilters = {};
+        let activeVoices = {};
         let activeNotes = new Set();
 
         const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -188,9 +191,9 @@
             'z': 'C3', 'x': 'D3', 'c': 'E3', 'v': 'F3', 'b': 'G3', 'n': 'A3', 'm': 'B3', 'ö': 'C4', 'ç': 'D4', '.': 'E4'
         };
 
-
         function createPiano() {
             const piano = document.getElementById('piano');
+            piano.innerHTML = ''; // Clear existing keys
             for (let octave = 2; octave < 6; octave++) {
                 whiteNotes.forEach(note => {
                     const key = document.createElement('div');
@@ -214,29 +217,25 @@
         }
 
         function playNote(note) {
-            if (activeOscillators[note]) {
-                stopNote(note);
-            }
-
+            const now = audioContext.currentTime;
             const frequency = noteToFreq(note);
 
             const oscillator = audioContext.createOscillator();
             oscillator.type = controls.waveform.value;
-            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(frequency, now);
 
             const gainNode = audioContext.createGain();
-            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0, now);
 
             const filter = audioContext.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(controls.filterCutoff.value, audioContext.currentTime);
-            filter.Q.setValueAtTime(controls.filterResonance.value, audioContext.currentTime);
+            filter.frequency.setValueAtTime(controls.filterCutoff.value, now);
+            filter.Q.setValueAtTime(controls.filterResonance.value, now);
 
             oscillator.connect(filter);
             filter.connect(gainNode);
             gainNode.connect(masterGainNode);
 
-            const now = audioContext.currentTime;
             const attackTime = parseFloat(controls.attack.value);
             const decayTime = parseFloat(controls.decay.value);
             const sustainLevel = parseFloat(controls.sustain.value);
@@ -244,54 +243,56 @@
             gainNode.gain.linearRampToValueAtTime(1, now + attackTime);
             gainNode.gain.linearRampToValueAtTime(sustainLevel, now + attackTime + decayTime);
 
-            oscillator.start();
+            oscillator.start(now);
 
-            activeOscillators[note] = oscillator;
-            activeGainNodes[note] = gainNode;
-            activeFilters[note] = filter;
+            // Apply LFO
+            const lfo = audioContext.createOscillator();
+            const lfoGain = audioContext.createGain();
+            lfo.frequency.setValueAtTime(parseFloat(controls.lfoRate.value), now);
+            lfoGain.gain.setValueAtTime(50, now); // LFO depth
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+            lfo.start(now);
+
+            const voice = { oscillator, gainNode, filter, lfo, lfoGain };
+
+            if (activeVoices[note]) {
+                releaseVoice(activeVoices[note]);
+            }
+
+            activeVoices[note] = voice;
             activeNotes.add(note);
 
             const keyElement = document.querySelector(`.key[data-note="${note}"]`);
             if (keyElement) {
                 keyElement.classList.add('active');
             }
+        }
 
-            // Apply LFO
-            const lfo = audioContext.createOscillator();
-            lfo.frequency.setValueAtTime(parseFloat(controls.lfoRate.value), audioContext.currentTime);
-            const lfoGain = audioContext.createGain();
-            lfoGain.gain.setValueAtTime(50, audioContext.currentTime); // LFO depth
-            lfo.connect(lfoGain);
-            lfoGain.connect(filter.frequency);
-            lfo.start();
+        function releaseVoice(voice) {
+            const now = audioContext.currentTime;
+            const releaseTime = parseFloat(controls.release.value);
+
+            voice.gainNode.gain.cancelScheduledValues(now);
+            voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
+            voice.gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
+
+            setTimeout(() => {
+                voice.oscillator.stop();
+                voice.oscillator.disconnect();
+                voice.gainNode.disconnect();
+                voice.filter.disconnect();
+                voice.lfo.stop();
+                voice.lfo.disconnect();
+                voice.lfoGain.disconnect();
+            }, releaseTime * 1000);
         }
 
         function stopNote(note) {
-            if (activeOscillators[note] && activeGainNodes[note]) {
-                const now = audioContext.currentTime;
-                const releaseTime = parseFloat(controls.release.value);
-
-                activeGainNodes[note].gain.cancelScheduledValues(now);
-                activeGainNodes[note].gain.setValueAtTime(activeGainNodes[note].gain.value, now);
-                activeGainNodes[note].gain.linearRampToValueAtTime(0, now + releaseTime);
-
-                activeOscillators[note].stop(now + releaseTime);
-
-                setTimeout(() => {
-                    if (activeOscillators[note]) {
-                        activeOscillators[note].disconnect();
-                        delete activeOscillators[note];
-                    }
-                    if (activeGainNodes[note]) {
-                        activeGainNodes[note].disconnect();
-                        delete activeGainNodes[note];
-                    }
-                    if (activeFilters[note]) {
-                        activeFilters[note].disconnect();
-                        delete activeFilters[note];
-                    }
-                    activeNotes.delete(note);
-                }, releaseTime * 1000);
+            if (activeVoices[note]) {
+                releaseVoice(activeVoices[note]);
+                delete activeVoices[note];
+                activeNotes.delete(note);
 
                 const keyElement = document.querySelector(`.key[data-note="${note}"]`);
                 if (keyElement) {
@@ -307,8 +308,11 @@
         }
 
         function drawVisualizer() {
-            const width = visualizer.width;
-            const height = visualizer.height;
+            const width = visualizer.offsetWidth;
+            const height = visualizer.offsetHeight;
+            visualizer.width = width;
+            visualizer.height = height;
+
             const analyser = audioContext.createAnalyser();
             masterGainNode.connect(analyser);
 
@@ -352,13 +356,26 @@
             draw();
         }
 
-        createPiano();
-        drawVisualizer();
+        function initializeSynth() {
+            createPiano();
+            drawVisualizer();
 
+            const keys = document.querySelectorAll('.key');
+            keys.forEach(key => {
+                key.addEventListener('mousedown', () => {
+                    const note = key.dataset.note;
+                    playNote(note);
+                });
+                key.addEventListener('mouseup', () => stopNote(key.dataset.note));
+                key.addEventListener('mouseleave', () => stopNote(key.dataset.note));
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeSynth);
 
         document.addEventListener('keydown', (event) => {
             const note = keyboardMap[event.key.toLowerCase()];
-            if (note && !activeNotes.has(note) && !event.repeat) {
+            if (note && !event.repeat) {
                 playNote(note);
             }
         });
@@ -370,50 +387,35 @@
             }
         });
 
-        const keys = document.querySelectorAll('.key');
-        keys.forEach(key => {
-            key.addEventListener('mousedown', () => {
-                const note = key.dataset.note;
-                if (!activeNotes.has(note)) {
-                    playNote(note);
-                }
-            });
-            key.addEventListener('mouseup', () => stopNote(key.dataset.note));
-            key.addEventListener('mouseleave', () => stopNote(key.dataset.note));
-        });
-
         window.addEventListener('blur', () => {
             activeNotes.forEach(stopNote);
         });
+
+        window.addEventListener('resize', drawVisualizer);
 
         function stopAllNotes() {
             activeNotes.forEach(stopNote);
         }
 
         Object.values(controls).forEach(control => {
-            control.addEventListener('change', stopAllNotes);
+            control.addEventListener('change', updateSynthParams);
         });
 
-        // Update filter and LFO when controls change
-        controls.filterCutoff.addEventListener('input', updateFilter);
-        controls.filterResonance.addEventListener('input', updateFilter);
-        controls.lfoRate.addEventListener('input', updateLFO);
-
-        function updateFilter() {
-            Object.values(activeFilters).forEach(filter => {
-                filter.frequency.setValueAtTime(controls.filterCutoff.value, audioContext.currentTime);
-                filter.Q.setValueAtTime(controls.filterResonance.value, audioContext.currentTime);
+        function updateSynthParams() {
+            Object.values(activeVoices).forEach(voice => {
+                voice.filter.frequency.setValueAtTime(controls.filterCutoff.value, audioContext.currentTime);
+                voice.filter.Q.setValueAtTime(controls.filterResonance.value, audioContext.currentTime);
+                voice.lfo.frequency.setValueAtTime(parseFloat(controls.lfoRate.value), audioContext.currentTime);
             });
         }
 
-        function updateLFO() {
-            // This is a simplified LFO update. In a more complex synth, you might want to recreate the LFO for each note.
-            Object.values(activeOscillators).forEach(osc => {
-                if (osc.lfo) {
-                    osc.lfo.frequency.setValueAtTime(parseFloat(controls.lfoRate.value), audioContext.currentTime);
-                }
-            });
-        }
+        // Initialize audio context on user interaction
+        document.addEventListener('click', function initAudio() {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            document.removeEventListener('click', initAudio);
+        });
     </script>
 </body>
 
