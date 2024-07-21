@@ -35,7 +35,7 @@
 
         #controls {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
@@ -54,7 +54,8 @@
         }
 
         .control {
-            margin-bottom: 10px;
+            margin-bottom: 20px;
+            text-align: center;
         }
 
         .control label {
@@ -64,24 +65,42 @@
             text-transform: uppercase;
         }
 
-        input[type="range"] {
-            width: 100%;
-            -webkit-appearance: none;
-            background: #4a4a4a;
-            outline: none;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        .circular-control {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto;
+            background-color: #4a4a4a;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
         }
 
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 15px;
-            height: 15px;
+        .circular-control::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            background-color: #2a2a2a;
             border-radius: 50%;
-            background: #00ff9d;
-            cursor: pointer;
-            box-shadow: -410px 0 0 400px #00ff9d;
+        }
+
+        .circular-control::after {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            width: 4px;
+            height: 40%;
+            background-color: #00ff9d;
+            transform-origin: bottom;
+            transform: translateX(-50%) rotate(var(--rotation, 0deg));
+        }
+
+        .circular-control input[type="range"] {
+            display: none;
         }
 
         select {
@@ -136,6 +155,8 @@
 <body>
     <div id="synth-container">
         <h1>Advanced PianoSynth</h1>
+        <div id="piano"></div>
+        <canvas id="visualizer"></canvas>
         <div id="controls">
             <div class="control-group">
                 <h2>Oscillator</h2>
@@ -150,15 +171,21 @@
                 </div>
                 <div class="control">
                     <label for="unison">Unison</label>
-                    <input type="range" id="unison" min="1" max="8" step="1" value="1">
+                    <div class="circular-control">
+                        <input type="range" id="unison" min="1" max="8" step="1" value="1">
+                    </div>
                 </div>
                 <div class="control">
                     <label for="detune">Detune</label>
-                    <input type="range" id="detune" min="0" max="100" step="1" value="0">
+                    <div class="circular-control">
+                        <input type="range" id="detune" min="0" max="100" step="1" value="0">
+                    </div>
                 </div>
                 <div class="control">
                     <label for="fmAmount">FM Amount</label>
-                    <input type="range" id="fmAmount" min="0" max="1000" step="1" value="0">
+                    <div class="circular-control">
+                        <input type="range" id="fmAmount" min="0" max="1000" step="1" value="0">
+                    </div>
                 </div>
             </div>
             <div class="control-group">
@@ -173,52 +200,72 @@
                 </div>
                 <div class="control">
                     <label for="filterCutoff">Cutoff</label>
-                    <input type="range" id="filterCutoff" min="20" max="20000" step="1" value="20000">
+                    <div class="circular-control">
+                        <input type="range" id="filterCutoff" min="20" max="20000" step="1" value="20000">
+                    </div>
                 </div>
                 <div class="control">
                     <label for="filterResonance">Resonance</label>
-                    <input type="range" id="filterResonance" min="0" max="20" step="0.1" value="0">
+                    <div class="circular-control">
+                        <input type="range" id="filterResonance" min="0" max="20" step="0.1" value="0">
+                    </div>
                 </div>
                 <div class="control">
                     <label for="filterEnvAmount">Env Amount</label>
-                    <input type="range" id="filterEnvAmount" min="0" max="1" step="0.01" value="0">
+                    <div class="circular-control">
+                        <input type="range" id="filterEnvAmount" min="0" max="1" step="0.01" value="0">
+                    </div>
                 </div>
             </div>
             <div class="control-group">
                 <h2>Envelope</h2>
                 <div class="control">
                     <label for="attack">Attack</label>
-                    <input type="range" id="attack" min="0" max="2" step="0.01" value="0.05">
+                    <div class="circular-control">
+                        <input type="range" id="attack" min="0" max="2" step="0.01" value="0.05">
+                    </div>
                 </div>
                 <div class="control">
                     <label for="decay">Decay</label>
-                    <input type="range" id="decay" min="0" max="2" step="0.01" value="0.1">
+                    <div class="circular-control">
+                        <input type="range" id="decay" min="0" max="2" step="0.01" value="0.1">
+                    </div>
                 </div>
                 <div class="control">
                     <label for="sustain">Sustain</label>
-                    <input type="range" id="sustain" min="0" max="1" step="0.01" value="0.5">
+                    <div class="circular-control">
+                        <input type="range" id="sustain" min="0" max="1" step="0.01" value="0.5">
+                    </div>
                 </div>
                 <div class="control">
                     <label for="release">Release</label>
-                    <input type="range" id="release" min="0" max="5" step="0.01" value="0.5">
+                    <div class="circular-control">
+                        <input type="range" id="release" min="0" max="5" step="0.01" value="0.5">
+                    </div>
                 </div>
             </div>
             <div class="control-group">
                 <h2>LFO</h2>
                 <div class="control">
                     <label for="lfoRate">Rate</label>
-                    <input type="range" id="lfoRate" min="0" max="20" step="0.1" value="0">
+                    <div class="circular-control">
+                        <input type="range" id="lfoRate" min="0" max="20" step="0.1" value="0">
+                    </div>
                 </div>
                 <div class="control">
                     <label for="lfoAmount">Amount</label>
-                    <input type="range" id="lfoAmount" min="0" max="1000" step="1" value="50">
+                    <div class="circular-control">
+                        <input type="range" id="lfoAmount" min="0" max="1000" step="1" value="50">
+                    </div>
                 </div>
             </div>
             <div class="control-group">
                 <h2>Noise</h2>
                 <div class="control">
                     <label for="noiseAmount">Amount</label>
-                    <input type="range" id="noiseAmount" min="0" max="1" step="0.01" value="0">
+                    <div class="circular-control">
+                        <input type="range" id="noiseAmount" min="0" max="1" step="0.01" value="0">
+                    </div>
                 </div>
             </div>
             <div class="control-group">
@@ -234,16 +281,17 @@
                         <option value="down">Down</option>
                         <option value="upDown">Up-Down</option>
                         <option value="random">Random</option>
+                        <option value="trance">Trance</option>
                     </select>
                 </div>
                 <div class="control">
                     <label for="arpSpeed">Speed (ms)</label>
-                    <input type="range" id="arpSpeed" min="50" max="500" step="10" value="200">
+                    <div class="circular-control">
+                        <input type="range" id="arpSpeed" min="50" max="500" step="10" value="200">
+                    </div>
                 </div>
             </div>
         </div>
-        <div id="piano"></div>
-        <canvas id="visualizer"></canvas>
     </div>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -357,8 +405,19 @@
                         return this.currentIndex + this.direction;
                     case 'random':
                         return Math.floor(Math.random() * this.notes.length);
+                    case 'trance':
+                        // Trance pattern: play the root note, then a higher note, then back to root
+                        if (!this.tranceStep) this.tranceStep = 0;
+                        this.tranceStep = (this.tranceStep + 1) % 3;
+                        if (this.tranceStep === 0) {
+                            return 0; // Root note
+                        } else if (this.tranceStep === 1) {
+                            return Math.min(2, this.notes.length - 1); // Third note or highest available
+                        } else {
+                            return 0; // Back to root
+                        }
                 }
-            }
+            },
         };
 
         function createPiano() {
@@ -742,6 +801,44 @@
                     osc.detune.setValueAtTime(detuneAmount, now);
                 });
             });
+
+            // Update circular control display
+            document.querySelectorAll('.circular-control input[type="range"]').forEach(input => {
+                const value = parseFloat(input.value);
+                const min = parseFloat(input.min);
+                const max = parseFloat(input.max);
+                const normalizedValue = (value - min) / (max - min);
+                const rotation = normalizedValue * 270 - 135; // Map 0-1 to -135deg to 135deg
+                input.parentNode.style.setProperty('--rotation', `${rotation}deg`);
+            });
+        }
+
+        function handleCircularControlInteraction(event) {
+            const control = event.currentTarget;
+            const input = control.querySelector('input[type="range"]');
+            let startY = event.clientY;
+            let startValue = parseFloat(input.value);
+
+            function handleMouseMove(e) {
+                const deltaY = startY - e.clientY;
+                const range = input.max - input.min;
+                const valueChange = (deltaY / 100) * range;
+                let newValue = startValue + valueChange;
+                newValue = Math.max(input.min, Math.min(input.max, newValue));
+
+                input.value = newValue;
+                updateSynthParams();
+                input.dispatchEvent(new Event('change'));
+                e.preventDefault();
+            }
+
+            function handleMouseUp() {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            }
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
         }
 
         function initializeSynth() {
@@ -810,6 +907,11 @@
                 control.addEventListener('change', updateVisualizer);
             });
 
+            // Add event listeners for circular controls
+            document.querySelectorAll('.circular-control').forEach(control => {
+                control.addEventListener('mousedown', handleCircularControlInteraction);
+            });
+
             // Initialize audio context on user interaction
             document.addEventListener('click', function initAudio() {
                 if (audioContext.state === 'suspended') {
@@ -817,6 +919,9 @@
                 }
                 document.removeEventListener('click', initAudio);
             });
+
+            // Initial update of circular controls
+            updateSynthParams();
         }
 
         // Initialize the synth when the DOM is fully loaded
