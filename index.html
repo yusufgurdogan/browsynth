@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,15 +13,18 @@
             align-items: center;
             background-color: #f0f0f0;
         }
+
         #controls {
             margin: 20px 0;
         }
+
         #piano {
             display: flex;
             background-color: #333;
             padding: 20px;
             border-radius: 10px;
         }
+
         .key {
             width: 40px;
             height: 160px;
@@ -29,6 +33,7 @@
             margin: 0 2px;
             cursor: pointer;
         }
+
         .key.black {
             width: 24px;
             height: 100px;
@@ -37,15 +42,18 @@
             z-index: 1;
             position: relative;
         }
+
         .key.active {
             background-color: #4CAF50;
         }
+
         #visualizer {
             margin-top: 20px;
             border: 1px solid #000;
         }
     </style>
 </head>
+
 <body>
     <header>
         <h1>Extended PianoSynth</h1>
@@ -80,10 +88,18 @@
         const blackNotes = ['C#', 'D#', 'F#', 'G#', 'A#'];
 
         const keyboardMap = {
-            'q': 'C5', '2': 'C#5', 'w': 'D5', '3': 'D#5', 'e': 'E5', 'r': 'F5', '5': 'F#5', 't': 'G5', '6': 'G#5', 'y': 'A5', '7': 'A#5', 'u': 'B5',
-            'i': 'C6', '9': 'C#6', 'o': 'D6', '0': 'D#6', 'p': 'E6', '[': 'F6', '=': 'F#6', ']': 'G6',
-            'z': 'C4', 'a': 'C#4', 'x': 'D4', 's': 'D#4', 'c': 'E4', 'v': 'F4', 'f': 'F#4', 'b': 'G4', 'h': 'G#4', 'n': 'A4', 'j': 'A#4', 'm': 'B4',
-            ',': 'C5', 'l': 'C#5', '.': 'D5', ';': 'D#5', '/': 'E5'
+            // Top row (white keys)
+            81: 'C5', 87: 'D5', 69: 'E5', 82: 'F5', 84: 'G5', 89: 'A5', 85: 'B5',
+            73: 'C6', 79: 'D6', 80: 'E6', 219: 'F6', 221: 'G6',
+            // Top row (black keys)
+            50: 'C#5', 51: 'D#5', 53: 'F#5', 54: 'G#5', 55: 'A#5',
+            57: 'C#6', 48: 'D#6', 187: 'F#6',
+            // Bottom row (white keys)
+            90: 'C4', 88: 'D4', 67: 'E4', 86: 'F4', 66: 'G4', 78: 'A4', 77: 'B4',
+            188: 'C5', 190: 'D5', 191: 'E5',
+            // Bottom row (black keys)
+            65: 'C#4', 83: 'D#4', 70: 'F#4', 71: 'G#4', 72: 'A#4',
+            76: 'C#5', 186: 'D#5'
         };
 
         function createPiano() {
@@ -205,16 +221,20 @@
         drawVisualizer();
 
         document.addEventListener('keydown', (event) => {
-            const note = keyboardMap[event.key.toLowerCase()];
+            const note = keyboardMap[event.keyCode];
             if (note && !event.repeat) {
                 playNote(note);
+                const keyElement = document.querySelector(`.key[data-note="${note}"]`);
+                if (keyElement) keyElement.classList.add('active');
             }
         });
 
         document.addEventListener('keyup', (event) => {
-            const note = keyboardMap[event.key.toLowerCase()];
+            const note = keyboardMap[event.keyCode];
             if (note) {
                 stopNote(note);
+                const keyElement = document.querySelector(`.key[data-note="${note}"]`);
+                if (keyElement) keyElement.classList.remove('active');
             }
         });
 
@@ -223,4 +243,5 @@
         });
     </script>
 </body>
+
 </html>
