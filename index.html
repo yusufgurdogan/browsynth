@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced PianoSynth</title>
+    <title>Browsynth</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -149,12 +149,32 @@
             border: 1px solid #4a4a4a;
             border-radius: 5px;
         }
+
+        #footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #00ff9d;
+        }
+
+        #footer a {
+            color: #00ff9d;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        #footer a:hover {
+            color: #00bfff;
+            /* Crystal blue color */
+            text-shadow: 0 0 5px #00bfff, 0 0 10px #00bfff;
+            /* Glowing effect */
+        }
     </style>
 </head>
 
 <body>
     <div id="synth-container">
-        <h1>Advanced PianoSynth</h1>
+        <h1>Browsynth</h1>
         <div id="piano"></div>
         <canvas id="visualizer"></canvas>
         <div id="controls">
@@ -292,6 +312,8 @@
                 </div>
             </div>
         </div>
+        <p id="footer">we like <a href="https://hypertrance.eu/" target="_blank"
+                rel="noopener noreferrer">hypertrance</a> ❤️</p>
     </div>
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -845,15 +867,47 @@
             createPiano();
             drawVisualizer();
 
+            let isMouseDown = false;
+            let lastPlayedNote = null;
+
             const keys = document.querySelectorAll('.key');
             keys.forEach(key => {
-                key.addEventListener('mousedown', () => {
-                    const note = key.dataset.note;
+                key.addEventListener('mousedown', (e) => {
+                    isMouseDown = true;
+                    const note = e.target.dataset.note;
                     playNote(note);
+                    lastPlayedNote = note;
                 });
-                key.addEventListener('mouseup', () => stopNote(key.dataset.note));
-                key.addEventListener('mouseleave', () => stopNote(key.dataset.note));
+
+                key.addEventListener('mouseenter', (e) => {
+                    if (isMouseDown) {
+                        const note = e.target.dataset.note;
+                        if (note !== lastPlayedNote) {
+                            stopNote(lastPlayedNote);
+                            playNote(note);
+                            lastPlayedNote = note;
+                        }
+                    }
+                });
+
+                key.addEventListener('mouseleave', (e) => {
+                    if (isMouseDown) {
+                        const note = e.target.dataset.note;
+                        stopNote(note);
+                    }
+                });
             });
+
+            document.addEventListener('mouseup', () => {
+                if (isMouseDown) {
+                    stopNote(lastPlayedNote);
+                    isMouseDown = false;
+                    lastPlayedNote = null;
+                }
+            });
+
+            // Prevent text selection while dragging
+            document.getElementById('piano').addEventListener('selectstart', (e) => e.preventDefault());
 
             // Arpeggiator controls
             controls.arpToggle.addEventListener('change', (e) => {
