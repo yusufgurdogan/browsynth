@@ -217,6 +217,11 @@
         }
 
         function playNote(note) {
+            // If the note is already active, don't play it again
+            if (activeVoices[note]) {
+                return;
+            }
+
             const now = audioContext.currentTime;
             const frequency = noteToFreq(note);
 
@@ -260,10 +265,6 @@
 
             const voice = { oscillator, gainNode, filter, lfo, lfoGain };
 
-            if (activeVoices[note]) {
-                releaseVoice(activeVoices[note]);
-            }
-
             activeVoices[note] = voice;
             activeNotes.add(note);
 
@@ -272,7 +273,6 @@
                 keyElement.classList.add('active');
             }
         }
-
         function releaseVoice(voice) {
             const now = audioContext.currentTime;
             const releaseTime = parseFloat(controls.release.value);
