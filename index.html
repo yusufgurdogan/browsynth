@@ -4,18 +4,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extended PianoSynth</title>
+    <title>Advanced PianoSynth</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #f0f0f0;
+            padding: 20px;
+            margin: 0;
+        }
+
+        #synth-container {
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
         #controls {
-            margin: 20px 0;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .control label {
+            margin-bottom: 5px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: #4a4a4a;
+            outline: none;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #00ff9d;
+            cursor: pointer;
+            box-shadow: -410px 0 0 400px #00ff9d;
+        }
+
+        select {
+            width: 100%;
+            padding: 5px;
+            background-color: #4a4a4a;
+            color: #e0e0e0;
+            border: none;
+            border-radius: 5px;
         }
 
         #piano {
@@ -44,63 +98,96 @@
         }
 
         .key.active {
-            background-color: #4CAF50;
+            background-color: #00ff9d;
         }
 
         #visualizer {
             margin-top: 20px;
-            border: 1px solid #000;
+            border: 1px solid #4a4a4a;
+            border-radius: 5px;
         }
     </style>
 </head>
 
 <body>
-    <header>
-        <h1>Extended PianoSynth</h1>
-    </header>
-
-    <div id="controls">
-        <select id="waveform">
-            <option value="sine">Sine</option>
-            <option value="square">Square</option>
-            <option value="sawtooth">Sawtooth</option>
-            <option value="triangle">Triangle</option>
-        </select>
+    <div id="synth-container">
+        <h1>Advanced PianoSynth</h1>
+        <div id="controls">
+            <div class="control">
+                <label for="waveform">Waveform</label>
+                <select id="waveform">
+                    <option value="sine">Sine</option>
+                    <option value="square">Square</option>
+                    <option value="sawtooth">Sawtooth</option>
+                    <option value="triangle">Triangle</option>
+                </select>
+            </div>
+            <div class="control">
+                <label for="attack">Attack</label>
+                <input type="range" id="attack" min="0" max="2" step="0.01" value="0.05">
+            </div>
+            <div class="control">
+                <label for="decay">Decay</label>
+                <input type="range" id="decay" min="0" max="2" step="0.01" value="0.1">
+            </div>
+            <div class="control">
+                <label for="sustain">Sustain</label>
+                <input type="range" id="sustain" min="0" max="1" step="0.01" value="0.5">
+            </div>
+            <div class="control">
+                <label for="release">Release</label>
+                <input type="range" id="release" min="0" max="5" step="0.01" value="0.5">
+            </div>
+            <div class="control">
+                <label for="filterCutoff">Filter Cutoff</label>
+                <input type="range" id="filterCutoff" min="20" max="20000" step="1" value="20000">
+            </div>
+            <div class="control">
+                <label for="filterResonance">Filter Resonance</label>
+                <input type="range" id="filterResonance" min="0" max="20" step="0.1" value="0">
+            </div>
+            <div class="control">
+                <label for="lfoRate">LFO Rate</label>
+                <input type="range" id="lfoRate" min="0" max="20" step="0.1" value="0">
+            </div>
+        </div>
+        <div id="piano"></div>
+        <canvas id="visualizer" width="800" height="200"></canvas>
     </div>
-
-    <div id="piano"></div>
-
-    <canvas id="visualizer" width="800" height="200"></canvas>
-
     <script>
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const gainNode = audioContext.createGain();
-        gainNode.connect(audioContext.destination);
+        const masterGainNode = audioContext.createGain();
+        masterGainNode.connect(audioContext.destination);
 
-        const waveformSelect = document.getElementById('waveform');
+        const controls = {
+            waveform: document.getElementById('waveform'),
+            attack: document.getElementById('attack'),
+            decay: document.getElementById('decay'),
+            sustain: document.getElementById('sustain'),
+            release: document.getElementById('release'),
+            filterCutoff: document.getElementById('filterCutoff'),
+            filterResonance: document.getElementById('filterResonance'),
+            lfoRate: document.getElementById('lfoRate')
+        };
+
         const visualizer = document.getElementById('visualizer');
         const visualizerContext = visualizer.getContext('2d');
 
         let activeOscillators = {};
+        let activeGainNodes = {};
+        let activeFilters = {};
+        let activeNotes = new Set();
 
         const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const whiteNotes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
         const blackNotes = ['C#', 'D#', 'F#', 'G#', 'A#'];
 
         const keyboardMap = {
-            // Top row (white keys)
-            81: 'C5', 87: 'D5', 69: 'E5', 82: 'F5', 84: 'G5', 89: 'A5', 85: 'B5',
-            73: 'C6', 79: 'D6', 80: 'E6', 219: 'F6', 221: 'G6',
-            // Top row (black keys)
-            50: 'C#5', 51: 'D#5', 53: 'F#5', 54: 'G#5', 55: 'A#5',
-            57: 'C#6', 48: 'D#6', 187: 'F#6',
-            // Bottom row (white keys)
-            90: 'C4', 88: 'D4', 67: 'E4', 86: 'F4', 66: 'G4', 78: 'A4', 77: 'B4',
-            188: 'C5', 190: 'D5', 191: 'E5',
-            // Bottom row (black keys)
-            65: 'C#4', 83: 'D#4', 70: 'F#4', 71: 'G#4', 72: 'A#4',
-            76: 'C#5', 186: 'D#5'
+            'q': 'C4', 'w': 'D4', 'e': 'E4', 'r': 'F4', 't': 'G4', 'y': 'A4', 'u': 'B4', 'ı': 'C5', 'o': 'D5', 'p': 'E5', 'ğ': 'F5', 'ü': 'G5',
+            'a': 'C#4', 's': 'D#4', 'f': 'F#4', 'g': 'G#4', 'h': 'A#4', 'j': 'C#5', 'k': 'D#5', 'l': 'F#5', 'ş': 'G#5', 'i': 'A#5',
+            'z': 'C3', 'x': 'D3', 'c': 'E3', 'v': 'F3', 'b': 'G3', 'n': 'A3', 'm': 'B3', 'ö': 'C4', 'ç': 'D4', '.': 'E4'
         };
+
 
         function createPiano() {
             const piano = document.getElementById('piano');
@@ -126,38 +213,85 @@
             });
         }
 
-        createPiano();
-
-        const keys = document.querySelectorAll('.key');
-        keys.forEach(key => {
-            key.addEventListener('mousedown', () => playNote(key.dataset.note));
-            key.addEventListener('mouseup', () => stopNote(key.dataset.note));
-            key.addEventListener('mouseleave', () => stopNote(key.dataset.note));
-        });
-
         function playNote(note) {
             if (activeOscillators[note]) {
                 stopNote(note);
             }
 
+            const frequency = noteToFreq(note);
+
             const oscillator = audioContext.createOscillator();
-            oscillator.type = waveformSelect.value;
-            oscillator.frequency.setValueAtTime(noteToFreq(note), audioContext.currentTime);
-            oscillator.connect(gainNode);
+            oscillator.type = controls.waveform.value;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+
+            const gainNode = audioContext.createGain();
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+
+            const filter = audioContext.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(controls.filterCutoff.value, audioContext.currentTime);
+            filter.Q.setValueAtTime(controls.filterResonance.value, audioContext.currentTime);
+
+            oscillator.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(masterGainNode);
+
+            const now = audioContext.currentTime;
+            const attackTime = parseFloat(controls.attack.value);
+            const decayTime = parseFloat(controls.decay.value);
+            const sustainLevel = parseFloat(controls.sustain.value);
+
+            gainNode.gain.linearRampToValueAtTime(1, now + attackTime);
+            gainNode.gain.linearRampToValueAtTime(sustainLevel, now + attackTime + decayTime);
+
             oscillator.start();
 
             activeOscillators[note] = oscillator;
+            activeGainNodes[note] = gainNode;
+            activeFilters[note] = filter;
+            activeNotes.add(note);
 
             const keyElement = document.querySelector(`.key[data-note="${note}"]`);
             if (keyElement) {
                 keyElement.classList.add('active');
             }
+
+            // Apply LFO
+            const lfo = audioContext.createOscillator();
+            lfo.frequency.setValueAtTime(parseFloat(controls.lfoRate.value), audioContext.currentTime);
+            const lfoGain = audioContext.createGain();
+            lfoGain.gain.setValueAtTime(50, audioContext.currentTime); // LFO depth
+            lfo.connect(lfoGain);
+            lfoGain.connect(filter.frequency);
+            lfo.start();
         }
 
         function stopNote(note) {
-            if (activeOscillators[note]) {
-                activeOscillators[note].stop();
-                delete activeOscillators[note];
+            if (activeOscillators[note] && activeGainNodes[note]) {
+                const now = audioContext.currentTime;
+                const releaseTime = parseFloat(controls.release.value);
+
+                activeGainNodes[note].gain.cancelScheduledValues(now);
+                activeGainNodes[note].gain.setValueAtTime(activeGainNodes[note].gain.value, now);
+                activeGainNodes[note].gain.linearRampToValueAtTime(0, now + releaseTime);
+
+                activeOscillators[note].stop(now + releaseTime);
+
+                setTimeout(() => {
+                    if (activeOscillators[note]) {
+                        activeOscillators[note].disconnect();
+                        delete activeOscillators[note];
+                    }
+                    if (activeGainNodes[note]) {
+                        activeGainNodes[note].disconnect();
+                        delete activeGainNodes[note];
+                    }
+                    if (activeFilters[note]) {
+                        activeFilters[note].disconnect();
+                        delete activeFilters[note];
+                    }
+                    activeNotes.delete(note);
+                }, releaseTime * 1000);
 
                 const keyElement = document.querySelector(`.key[data-note="${note}"]`);
                 if (keyElement) {
@@ -176,7 +310,7 @@
             const width = visualizer.width;
             const height = visualizer.height;
             const analyser = audioContext.createAnalyser();
-            gainNode.connect(analyser);
+            masterGainNode.connect(analyser);
 
             analyser.fftSize = 2048;
             const bufferLength = analyser.frequencyBinCount;
@@ -192,7 +326,7 @@
                 visualizerContext.fillRect(0, 0, width, height);
 
                 visualizerContext.lineWidth = 2;
-                visualizerContext.strokeStyle = 'rgb(0, 255, 204)';
+                visualizerContext.strokeStyle = '#00ff9d';
                 visualizerContext.beginPath();
 
                 const sliceWidth = width * 1.0 / bufferLength;
@@ -218,29 +352,68 @@
             draw();
         }
 
+        createPiano();
         drawVisualizer();
 
+
         document.addEventListener('keydown', (event) => {
-            const note = keyboardMap[event.keyCode];
-            if (note && !event.repeat) {
+            const note = keyboardMap[event.key.toLowerCase()];
+            if (note && !activeNotes.has(note) && !event.repeat) {
                 playNote(note);
-                const keyElement = document.querySelector(`.key[data-note="${note}"]`);
-                if (keyElement) keyElement.classList.add('active');
             }
         });
 
         document.addEventListener('keyup', (event) => {
-            const note = keyboardMap[event.keyCode];
+            const note = keyboardMap[event.key.toLowerCase()];
             if (note) {
                 stopNote(note);
-                const keyElement = document.querySelector(`.key[data-note="${note}"]`);
-                if (keyElement) keyElement.classList.remove('active');
             }
         });
 
-        window.addEventListener('blur', () => {
-            Object.keys(activeOscillators).forEach(stopNote);
+        const keys = document.querySelectorAll('.key');
+        keys.forEach(key => {
+            key.addEventListener('mousedown', () => {
+                const note = key.dataset.note;
+                if (!activeNotes.has(note)) {
+                    playNote(note);
+                }
+            });
+            key.addEventListener('mouseup', () => stopNote(key.dataset.note));
+            key.addEventListener('mouseleave', () => stopNote(key.dataset.note));
         });
+
+        window.addEventListener('blur', () => {
+            activeNotes.forEach(stopNote);
+        });
+
+        function stopAllNotes() {
+            activeNotes.forEach(stopNote);
+        }
+
+        Object.values(controls).forEach(control => {
+            control.addEventListener('change', stopAllNotes);
+        });
+
+        // Update filter and LFO when controls change
+        controls.filterCutoff.addEventListener('input', updateFilter);
+        controls.filterResonance.addEventListener('input', updateFilter);
+        controls.lfoRate.addEventListener('input', updateLFO);
+
+        function updateFilter() {
+            Object.values(activeFilters).forEach(filter => {
+                filter.frequency.setValueAtTime(controls.filterCutoff.value, audioContext.currentTime);
+                filter.Q.setValueAtTime(controls.filterResonance.value, audioContext.currentTime);
+            });
+        }
+
+        function updateLFO() {
+            // This is a simplified LFO update. In a more complex synth, you might want to recreate the LFO for each note.
+            Object.values(activeOscillators).forEach(osc => {
+                if (osc.lfo) {
+                    osc.lfo.frequency.setValueAtTime(parseFloat(controls.lfoRate.value), audioContext.currentTime);
+                }
+            });
+        }
     </script>
 </body>
 
