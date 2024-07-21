@@ -240,8 +240,12 @@
             const decayTime = parseFloat(controls.decay.value);
             const sustainLevel = parseFloat(controls.sustain.value);
 
-            gainNode.gain.linearRampToValueAtTime(1, now + attackTime);
-            gainNode.gain.linearRampToValueAtTime(sustainLevel, now + attackTime + decayTime);
+            // Adjust the peak level based on the number of active notes
+            const peakLevel = 0.66 / Math.max(1, Math.sqrt(activeNotes.size));
+            const sustainedLevel = sustainLevel * peakLevel;
+
+            gainNode.gain.linearRampToValueAtTime(peakLevel, now + attackTime);
+            gainNode.gain.linearRampToValueAtTime(sustainedLevel, now + attackTime + decayTime);
 
             oscillator.start(now);
 
