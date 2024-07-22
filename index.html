@@ -316,670 +316,631 @@
                 rel="noopener noreferrer">hypertrance</a> ❤️</p>
     </div>
     <script>
+        // Main audio context and master gain node
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const masterGainNode = audioContext.createGain();
-        masterGainNode.connect(audioContext.destination);
+        masterGainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
+        const compressor = audioContext.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-24, audioContext.currentTime);
+        compressor.knee.setValueAtTime(30, audioContext.currentTime);
+        compressor.ratio.setValueAtTime(12, audioContext.currentTime);
+        compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
+        compressor.release.setValueAtTime(0.25, audioContext.currentTime);
+        masterGainNode.connect(compressor);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        compressor.connect(analyser);
+        analyser.connect(audioContext.destination);
 
-        const controls = {
-            waveform: document.getElementById('waveform'),
-            unison: document.getElementById('unison'),
-            detune: document.getElementById('detune'),
-            fmAmount: document.getElementById('fmAmount'),
-            filterType: document.getElementById('filterType'),
-            filterCutoff: document.getElementById('filterCutoff'),
-            filterResonance: document.getElementById('filterResonance'),
-            filterEnvAmount: document.getElementById('filterEnvAmount'),
-            attack: document.getElementById('attack'),
-            decay: document.getElementById('decay'),
-            sustain: document.getElementById('sustain'),
-            release: document.getElementById('release'),
-            lfoRate: document.getElementById('lfoRate'),
-            lfoAmount: document.getElementById('lfoAmount'),
-            noiseAmount: document.getElementById('noiseAmount'),
-            arpToggle: document.getElementById('arpToggle'),
-            arpPattern: document.getElementById('arpPattern'),
-            arpSpeed: document.getElementById('arpSpeed')
+        // Synth configuration object
+        const SynthConfig = {
+            waveforms: ['sine', 'square', 'sawtooth', 'triangle'],
+            filterTypes: ['lowpass', 'highpass', 'bandpass'],
+            notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+            whiteNotes: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+            blackNotes: ['C#', 'D#', 'F#', 'G#', 'A#'],
+            keyboardMap: {
+                'q': 'C4', 'w': 'D4', 'e': 'E4', 'r': 'F4', 't': 'G4', 'y': 'A4', 'u': 'B4',
+                'ı': 'C5', 'o': 'D5', 'p': 'E5', 'ğ': 'F5', 'ü': 'G5',
+                'a': 'C#4', 's': 'D#4', 'f': 'F#4', 'g': 'G#4', 'h': 'A#4',
+                'j': 'C#5', 'k': 'D#5', 'l': 'F#5', 'ş': 'G#5', 'i': 'A#5',
+                'z': 'C3', 'x': 'D3', 'c': 'E3', 'v': 'F3', 'b': 'G3', 'n': 'A3', 'm': 'B3',
+                'ö': 'C4', 'ç': 'D4', '.': 'E4'
+            },
+            maxPolyphony: 8,
         };
 
-        const visualizer = document.getElementById('visualizer');
-        const visualizerContext = visualizer.getContext('2d');
-
-        let activeVoices = {};
-        let activeNotes = new Set();
-
-        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-        const whiteNotes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-        const blackNotes = ['C#', 'D#', 'F#', 'G#', 'A#'];
-
-        const keyboardMap = {
-            'q': 'C4', 'w': 'D4', 'e': 'E4', 'r': 'F4', 't': 'G4', 'y': 'A4', 'u': 'B4', 'ı': 'C5', 'o': 'D5', 'p': 'E5', 'ğ': 'F5', 'ü': 'G5',
-            'a': 'C#4', 's': 'D#4', 'f': 'F#4', 'g': 'G#4', 'h': 'A#4', 'j': 'C#5', 'k': 'D#5', 'l': 'F#5', 'ş': 'G#5', 'i': 'A#5',
-            'z': 'C3', 'x': 'D3', 'c': 'E3', 'v': 'F3', 'b': 'G3', 'n': 'A3', 'm': 'B3', 'ö': 'C4', 'ç': 'D4', '.': 'E4'
+        // Synth state
+        const SynthState = {
+            activeVoices: {},
+            activeNotes: new Set(),
+            controls: {},
+            arpeggiator: {
+                isOn: false,
+                pattern: 'up',
+                speed: 200,
+                notes: [],
+                currentIndex: 0,
+                intervalId: null
+            }
         };
 
-        const arpeggiator = {
-            isOn: false,
-            pattern: 'up',
-            speed: 200,
-            notes: [],
-            currentIndex: 0,
-            intervalId: null,
+        // Utility functions
+        const Util = {
+            noteToFreq(note) {
+                if (!note) {
+                    console.error('Invalid note:', note);
+                    return 0;
+                }
 
+                let [noteName, octave] = note.match(/([A-G]#?)(\d+)/).slice(1);
+                octave = parseInt(octave);
+
+                const noteIndex = SynthConfig.notes.indexOf(noteName);
+                if (noteIndex === -1) {
+                    console.error('Invalid note name:', noteName);
+                    return 0;
+                }
+
+                return 440 * Math.pow(2, (noteIndex - 9) / 12 + (octave - 4));
+            },
+
+            createNoiseBuffer() {
+                const bufferSize = audioContext.sampleRate;
+                const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+                const output = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                return buffer;
+            }
+        };
+
+        // Synth voice creation and management
+        const Voice = {
+            create(note) {
+                const frequency = Util.noteToFreq(note);
+                const now = audioContext.currentTime;
+
+                const oscillators = [];
+                const unisonCount = parseInt(SynthState.controls.unison.value) || 1;
+                const detune = parseFloat(SynthState.controls.detune.value) || 0;
+
+                for (let i = 0; i < unisonCount; i++) {
+                    const osc = audioContext.createOscillator();
+                    osc.type = SynthState.controls.waveform.value;
+                    osc.frequency.setValueAtTime(frequency, now);
+
+                    const detuneAmount = unisonCount > 1 ? (i / (unisonCount - 1) - 0.5) * detune : 0;
+                    osc.detune.setValueAtTime(detuneAmount, now);
+
+                    oscillators.push(osc);
+                }
+
+                const gainNode = audioContext.createGain();
+                gainNode.gain.setValueAtTime(0, now);
+
+                const filter = audioContext.createBiquadFilter();
+                filter.type = SynthState.controls.filterType.value;
+                filter.frequency.setValueAtTime(SynthState.controls.filterCutoff.value, now);
+                filter.Q.setValueAtTime(SynthState.controls.filterResonance.value, now);
+
+                const fmOsc = audioContext.createOscillator();
+                fmOsc.frequency.setValueAtTime(frequency * 2, now);
+                const fmGain = audioContext.createGain();
+                fmGain.gain.setValueAtTime(parseFloat(SynthState.controls.fmAmount.value) || 0, now);
+
+                const noiseOsc = audioContext.createBufferSource();
+                noiseOsc.buffer = Util.createNoiseBuffer();
+                noiseOsc.loop = true;
+                const noiseGain = audioContext.createGain();
+                noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value) || 0, now);
+
+                const lfo = audioContext.createOscillator();
+                const lfoGain = audioContext.createGain();
+                lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value), now);
+                lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value) || 0, now);
+
+                // Connect nodes
+                oscillators.forEach(osc => osc.connect(filter));
+                filter.connect(gainNode);
+                gainNode.connect(compressor);
+                fmOsc.connect(fmGain);
+                fmGain.connect(filter.frequency);
+                noiseOsc.connect(noiseGain);
+                noiseGain.connect(filter);
+                lfo.connect(lfoGain);
+                lfoGain.connect(filter.frequency);
+
+                // Start oscillators
+                oscillators.forEach(osc => osc.start(now));
+                fmOsc.start(now);
+                noiseOsc.start(now);
+                lfo.start(now);
+
+                return { oscillators, gainNode, filter, fmOsc, fmGain, noiseOsc, noiseGain, lfo, lfoGain };
+            },
+
+            play(note, isArpeggiator = false) {
+                if (SynthState.arpeggiator.isOn && !isArpeggiator) {
+                    Arpeggiator.addNote(note);
+                    return;
+                }
+                if (SynthState.activeVoices[note]) return;
+
+                // Implement polyphony limiting
+                if (Object.keys(SynthState.activeVoices).length >= SynthConfig.maxPolyphony) {
+                    const oldestNote = Object.keys(SynthState.activeVoices)[0];
+                    this.release(oldestNote);
+                }
+
+                const voice = this.create(note);
+                SynthState.activeVoices[note] = voice;
+                SynthState.activeNotes.add(note);
+
+                const now = audioContext.currentTime;
+                const attackTime = parseFloat(SynthState.controls.attack.value);
+                const decayTime = parseFloat(SynthState.controls.decay.value);
+                const sustainLevel = parseFloat(SynthState.controls.sustain.value);
+
+                // Adjust the peak level based on the number of active voices
+                const peakLevel = 0.5 / Math.max(1, Math.sqrt(Object.keys(SynthState.activeVoices).length));
+                const sustainedLevel = sustainLevel * peakLevel;
+
+                voice.gainNode.gain.linearRampToValueAtTime(peakLevel, now + attackTime);
+                voice.gainNode.gain.linearRampToValueAtTime(sustainedLevel, now + attackTime + decayTime);
+
+                // Apply filter envelope
+                const filterEnvAmount = parseFloat(SynthState.controls.filterEnvAmount.value);
+                const filterStartFreq = voice.filter.frequency.value;
+                const filterPeakFreq = Math.min(filterStartFreq * (1 + filterEnvAmount * 10), audioContext.sampleRate / 2);
+                voice.filter.frequency.linearRampToValueAtTime(filterPeakFreq, now + attackTime);
+                voice.filter.frequency.linearRampToValueAtTime(filterStartFreq, now + attackTime + decayTime);
+
+                const keyElement = document.querySelector(`.key[data-note="${note}"]`);
+                if (keyElement) keyElement.classList.add('active');
+            },
+
+            release(note, isArpeggiator = false) {
+                if (SynthState.arpeggiator.isOn && !isArpeggiator) {
+                    Arpeggiator.removeNote(note);
+                    return;
+                }
+
+                const voice = SynthState.activeVoices[note];
+                if (!voice) return;
+
+                const now = audioContext.currentTime;
+                const releaseTime = parseFloat(SynthState.controls.release.value);
+
+                voice.gainNode.gain.cancelScheduledValues(now);
+                voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
+                voice.gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
+
+                setTimeout(() => {
+                    voice.oscillators.forEach(osc => {
+                        osc.stop();
+                        osc.disconnect();
+                    });
+                    voice.gainNode.disconnect();
+                    voice.filter.disconnect();
+                    voice.fmOsc.stop();
+                    voice.fmOsc.disconnect();
+                    voice.fmGain.disconnect();
+                    voice.noiseOsc.stop();
+                    voice.noiseOsc.disconnect();
+                    voice.noiseGain.disconnect();
+                    voice.lfo.stop();
+                    voice.lfo.disconnect();
+                    voice.lfoGain.disconnect();
+                }, releaseTime * 1000);
+
+                delete SynthState.activeVoices[note];
+                SynthState.activeNotes.delete(note);
+
+                const keyElement = document.querySelector(`.key[data-note="${note}"]`);
+                if (keyElement) keyElement.classList.remove('active');
+            },
+
+            stopAllNotes(isArpeggiator = false) {
+                if (SynthState.arpeggiator.isOn && !isArpeggiator) {
+                    Arpeggiator.stop();
+                    return;
+                }
+
+                SynthState.activeNotes.forEach(note => {
+                    if (SynthState.activeVoices[note]) {
+                        this.release(note, true);
+                    }
+                });
+                SynthState.activeNotes.clear();
+
+                const keys = document.querySelectorAll('.key.active');
+                keys.forEach(key => key.classList.remove('active'));
+            }
+        };
+
+        // Arpeggiator functionality
+        const Arpeggiator = {
             start() {
-                if (this.notes.length === 0) return;
+                if (SynthState.arpeggiator.notes.length === 0) return;
                 this.stop();
+                SynthState.arpeggiator.currentIndex = 0;
                 this.playCurrentNote();
-                this.intervalId = setInterval(() => this.playNextNote(), this.speed);
+                SynthState.arpeggiator.intervalId = setInterval(() => this.playNextNote(), SynthState.arpeggiator.speed);
             },
 
             stop() {
-                if (this.intervalId) {
-                    clearInterval(this.intervalId);
-                    this.intervalId = null;
+                if (SynthState.arpeggiator.intervalId) {
+                    clearInterval(SynthState.arpeggiator.intervalId);
+                    SynthState.arpeggiator.intervalId = null;
                 }
-                stopAllNotes();
+                Voice.stopAllNotes(true);
             },
 
             addNote(note) {
-                if (!this.notes.includes(note)) {
-                    this.notes.push(note);
-                    this.notes.sort((a, b) => noteToFreq(a) - noteToFreq(b));
+                if (!SynthState.arpeggiator.notes.includes(note)) {
+                    SynthState.arpeggiator.notes.push(note);
+                    SynthState.arpeggiator.notes.sort((a, b) => Util.noteToFreq(a) - Util.noteToFreq(b));
                 }
-                if (this.notes.length === 1) {
+                if (SynthState.arpeggiator.isOn && SynthState.arpeggiator.notes.length === 1) {
                     this.start();
                 }
             },
 
             removeNote(note) {
-                const index = this.notes.indexOf(note);
+                const index = SynthState.arpeggiator.notes.indexOf(note);
                 if (index > -1) {
-                    this.notes.splice(index, 1);
+                    SynthState.arpeggiator.notes.splice(index, 1);
                 }
-                if (this.notes.length === 0) {
+                if (SynthState.arpeggiator.notes.length === 0) {
                     this.stop();
                 }
             },
 
             playNextNote() {
-                this.currentIndex = this.getNextIndex();
+                SynthState.arpeggiator.currentIndex = this.getNextIndex();
                 this.playCurrentNote();
             },
 
             playCurrentNote() {
-                if (this.notes.length === 0) return;
-                const note = this.notes[this.currentIndex];
-                stopAllNotes();
-                playNote(note, true);
+                if (SynthState.arpeggiator.notes.length === 0) return;
+                const note = SynthState.arpeggiator.notes[SynthState.arpeggiator.currentIndex];
+                Voice.stopAllNotes(true);
+                Voice.play(note, true);
             },
 
             getNextIndex() {
-                switch (this.pattern) {
+                const { pattern, currentIndex, notes } = SynthState.arpeggiator;
+                switch (pattern) {
                     case 'up':
-                        return (this.currentIndex + 1) % this.notes.length;
+                        return (currentIndex + 1) % notes.length;
                     case 'down':
-                        return (this.currentIndex - 1 + this.notes.length) % this.notes.length;
+                        return (currentIndex - 1 + notes.length) % notes.length;
                     case 'upDown':
-                        if (this.currentIndex === 0) {
-                            this.direction = 1;
-                        } else if (this.currentIndex === this.notes.length - 1) {
-                            this.direction = -1;
-                        }
-                        return this.currentIndex + this.direction;
+                        if (!this.direction) this.direction = 1;
+                        if (currentIndex === 0) this.direction = 1;
+                        else if (currentIndex === notes.length - 1) this.direction = -1;
+                        return currentIndex + this.direction;
                     case 'random':
-                        return Math.floor(Math.random() * this.notes.length);
+                        return Math.floor(Math.random() * notes.length);
                     case 'trance':
-                        // Trance pattern: play the root note, then a higher note, then back to root
                         if (!this.tranceStep) this.tranceStep = 0;
                         this.tranceStep = (this.tranceStep + 1) % 3;
-                        if (this.tranceStep === 0) {
-                            return 0; // Root note
-                        } else if (this.tranceStep === 1) {
-                            return Math.min(2, this.notes.length - 1); // Third note or highest available
-                        } else {
-                            return 0; // Back to root
-                        }
+                        return this.tranceStep === 1 ? Math.min(2, notes.length - 1) : 0;
                 }
+            }
+        };
+
+        // UI related functions
+        const UI = {
+            createPiano() {
+                const piano = document.getElementById('piano');
+                piano.innerHTML = '';
+                for (let octave = 1; octave < 7; octave++) {
+                    SynthConfig.whiteNotes.forEach(note => {
+                        const key = document.createElement('div');
+                        key.className = 'key';
+                        key.dataset.note = note + octave;
+                        piano.appendChild(key);
+                    });
+                }
+
+                const whiteKeys = piano.querySelectorAll('.key');
+                let blackKeyIndex = 0;
+                whiteKeys.forEach((whiteKey, index) => {
+                    if (index % 7 !== 2 && index % 7 !== 6) {
+                        const blackKey = document.createElement('div');
+                        blackKey.className = 'key black';
+                        blackKey.dataset.note = SynthConfig.blackNotes[blackKeyIndex % 5] + (Math.floor(index / 7) + 1);
+                        whiteKey.parentNode.insertBefore(blackKey, whiteKey.nextSibling);
+                        blackKeyIndex++;
+                    }
+                });
+            },
+
+            updateVisualizer() {
+                const visualizer = document.getElementById('visualizer');
+                visualizer.width = visualizer.offsetWidth;
+                visualizer.height = visualizer.offsetHeight;
+                const ctx = visualizer.getContext('2d');
+                const width = visualizer.width;
+                const height = visualizer.height;
+
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#00ff9d';
+
+                let animationFrameId;
+
+                function draw() {
+                    animationFrameId = requestAnimationFrame(draw);
+
+                    analyser.getByteTimeDomainData(dataArray);
+
+                    ctx.fillStyle = 'rgba(26, 26, 26, 0.2)';
+                    ctx.fillRect(0, 0, width, height);
+
+                    ctx.beginPath();
+                    const sliceWidth = width * 1.0 / bufferLength;
+                    let x = 0;
+
+                    for (let i = 0; i < bufferLength; i += 2) {  // Skip every other sample
+                        const v = dataArray[i] / 128.0;
+                        const y = v * height / 2;
+
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+
+                        x += sliceWidth * 2;  // Double the step size
+                    }
+
+                    ctx.lineTo(width, height / 2);
+                    ctx.stroke();
+                }
+
+                draw();
+
+                return () => {
+                    cancelAnimationFrame(animationFrameId);
+                };
+            },
+
+            updateCircularControls() {
+                document.querySelectorAll('.circular-control input[type="range"]').forEach(input => {
+                    const value = parseFloat(input.value);
+                    const min = parseFloat(input.min);
+                    const max = parseFloat(input.max);
+                    const normalizedValue = (value - min) / (max - min);
+                    const rotation = normalizedValue * 270 - 135; // Map 0-1 to -135deg to 135deg
+                    input.parentNode.style.setProperty('--rotation', `${rotation}deg`);
+                });
+            },
+
+            handleCircularControlInteraction(event) {
+                const control = event.currentTarget;
+                const input = control.querySelector('input[type="range"]');
+                let startY = event.clientY;
+                let startValue = parseFloat(input.value);
+
+                function handleMouseMove(e) {
+                    const deltaY = startY - e.clientY;
+                    const range = input.max - input.min;
+                    const valueChange = (deltaY / 100) * range;
+                    let newValue = startValue + valueChange;
+                    newValue = Math.max(input.min, Math.min(input.max, newValue));
+
+                    input.value = newValue;
+                    Synth.updateParams();
+                    input.dispatchEvent(new Event('change'));
+                    e.preventDefault();
+                }
+
+                function handleMouseUp() {
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                }
+
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            },
+
+            initializeEventListeners() {
+                // Piano key events
+                const keys = document.querySelectorAll('.key');
+                let isMouseDown = false;
+                let lastPlayedNote = null;
+
+                keys.forEach(key => {
+                    key.addEventListener('mousedown', (e) => {
+                        isMouseDown = true;
+                        const note = e.target.dataset.note;
+                        Voice.play(note);
+                        lastPlayedNote = note;
+                    });
+
+                    key.addEventListener('mouseenter', (e) => {
+                        if (isMouseDown) {
+                            const note = e.target.dataset.note;
+                            if (note !== lastPlayedNote) {
+                                Voice.release(lastPlayedNote);
+                                Voice.play(note);
+                                lastPlayedNote = note;
+                            }
+                        }
+                    });
+
+                    key.addEventListener('mouseleave', (e) => {
+                        if (isMouseDown) {
+                            const note = e.target.dataset.note;
+                            Voice.release(note);
+                        }
+                    });
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isMouseDown) {
+                        Voice.release(lastPlayedNote);
+                        isMouseDown = false;
+                        lastPlayedNote = null;
+                    }
+                });
+
+                // Prevent text selection while dragging
+                document.getElementById('piano').addEventListener('selectstart', (e) => e.preventDefault());
+
+                // Arpeggiator controls
+                SynthState.controls.arpToggle.addEventListener('change', (e) => {
+                    SynthState.arpeggiator.isOn = e.target.checked;
+                    if (SynthState.arpeggiator.isOn) {
+                        Voice.stopAllNotes(true);
+                        Arpeggiator.start();
+                    } else {
+                        Arpeggiator.stop();
+                    }
+                });
+
+                SynthState.controls.arpPattern.addEventListener('change', (e) => {
+                    SynthState.arpeggiator.pattern = e.target.value;
+                });
+
+                SynthState.controls.arpSpeed.addEventListener('input', (e) => {
+                    SynthState.arpeggiator.speed = parseInt(e.target.value);
+                    if (SynthState.arpeggiator.isOn) {
+                        Arpeggiator.stop();
+                        Arpeggiator.start();
+                    }
+                });
+
+                // Keyboard controls
+                document.addEventListener('keydown', (event) => {
+                    const note = SynthConfig.keyboardMap[event.key.toLowerCase()];
+                    if (note && !event.repeat) {
+                        Voice.play(note);
+                    }
+                });
+
+                document.addEventListener('keyup', (event) => {
+                    const note = SynthConfig.keyboardMap[event.key.toLowerCase()];
+                    if (note) {
+                        Voice.release(note);
+                    }
+                });
+
+                // Window blur event
+                window.addEventListener('blur', () => {
+                    Voice.stopAllNotes();
+                });
+
+                // Window resize event
+                window.addEventListener('resize', () => {
+                    this.updateVisualizer();
+                });
+
+                // Add event listeners for all controls
+                Object.values(SynthState.controls).forEach(control => {
+                    control.addEventListener('input', Synth.updateParams);
+                    control.addEventListener('change', this.updateVisualizer);
+                });
+
+                // Add event listeners for circular controls
+                document.querySelectorAll('.circular-control').forEach(control => {
+                    control.addEventListener('mousedown', this.handleCircularControlInteraction);
+                });
+
+                // Initialize audio context and start visualizer immediately
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().then(() => {
+                        this.updateVisualizer();
+                    });
+                } else {
+                    this.updateVisualizer();
+                }
+            }
+        };
+
+        // Main Synth object
+        const Synth = {
+            initialize() {
+                SynthState.controls = {
+                    waveform: document.getElementById('waveform'),
+                    unison: document.getElementById('unison'),
+                    detune: document.getElementById('detune'),
+                    fmAmount: document.getElementById('fmAmount'),
+                    filterType: document.getElementById('filterType'),
+                    filterCutoff: document.getElementById('filterCutoff'),
+                    filterResonance: document.getElementById('filterResonance'),
+                    filterEnvAmount: document.getElementById('filterEnvAmount'),
+                    attack: document.getElementById('attack'),
+                    decay: document.getElementById('decay'),
+                    sustain: document.getElementById('sustain'),
+                    release: document.getElementById('release'),
+                    lfoRate: document.getElementById('lfoRate'),
+                    lfoAmount: document.getElementById('lfoAmount'),
+                    noiseAmount: document.getElementById('noiseAmount'),
+                    arpToggle: document.getElementById('arpToggle'),
+                    arpPattern: document.getElementById('arpPattern'),
+                    arpSpeed: document.getElementById('arpSpeed')
+                };
+
+                UI.createPiano();
+                UI.initializeEventListeners();
+                UI.updateVisualizer();
+                this.updateParams();
+            },
+
+            updateParams() {
+                Object.values(SynthState.activeVoices).forEach(voice => {
+                    const now = audioContext.currentTime;
+                    voice.filter.type = SynthState.controls.filterType.value;
+                    voice.filter.frequency.setValueAtTime(parseFloat(SynthState.controls.filterCutoff.value), now);
+                    voice.filter.Q.setValueAtTime(parseFloat(SynthState.controls.filterResonance.value), now);
+                    voice.fmGain.gain.setValueAtTime(parseFloat(SynthState.controls.fmAmount.value) || 0, now);
+                    voice.lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value) || 0, now);
+                    voice.noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value) || 0, now);
+                    voice.lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value) || 0, now);
+
+                    // Update unison and detune
+                    const unisonCount = parseInt(SynthState.controls.unison.value) || 1;
+                    const detune = parseFloat(SynthState.controls.detune.value) || 0;
+
+                    // If the number of oscillators has changed, we need to create or remove oscillators
+                    while (voice.oscillators.length < unisonCount) {
+                        const newOsc = audioContext.createOscillator();
+                        newOsc.type = SynthState.controls.waveform.value;
+                        newOsc.frequency.setValueAtTime(voice.oscillators[0].frequency.value, now);
+                        newOsc.connect(voice.filter);
+                        newOsc.start(now);
+                        voice.oscillators.push(newOsc);
+                    }
+                    while (voice.oscillators.length > unisonCount) {
+                        const oscToRemove = voice.oscillators.pop();
+                        oscToRemove.stop(now);
+                        oscToRemove.disconnect();
+                    }
+
+                    // Update detune for each oscillator
+                    voice.oscillators.forEach((osc, i) => {
+                        osc.type = SynthState.controls.waveform.value;
+                        let detuneAmount = 0;
+                        if (unisonCount > 1) {
+                            detuneAmount = (i / (unisonCount - 1) - 0.5) * detune;
+                        }
+                        osc.detune.setValueAtTime(detuneAmount, now);
+                    });
+                });
+
+                UI.updateCircularControls();
             },
         };
 
-        function createPiano() {
-            const piano = document.getElementById('piano');
-            piano.innerHTML = '';
-            for (let octave = 1; octave < 7; octave++) {
-                whiteNotes.forEach(note => {
-                    const key = document.createElement('div');
-                    key.className = 'key';
-                    key.dataset.note = note + octave;
-                    piano.appendChild(key);
-                });
-            }
-
-            const whiteKeys = piano.querySelectorAll('.key');
-            let blackKeyIndex = 0;
-            whiteKeys.forEach((whiteKey, index) => {
-                if (index % 7 !== 2 && index % 7 !== 6) {
-                    const blackKey = document.createElement('div');
-                    blackKey.className = 'key black';
-                    blackKey.dataset.note = blackNotes[blackKeyIndex % 5] + (Math.floor(index / 7) + 1);
-                    whiteKey.parentNode.insertBefore(blackKey, whiteKey.nextSibling);
-                    blackKeyIndex++;
-                }
-            });
-        }
-
-        function updateVisualizer() {
-            const width = visualizer.offsetWidth;
-            const height = visualizer.offsetHeight;
-            visualizerContext.clearRect(0, 0, width, height);
-
-            visualizerContext.fillStyle = '#00ff9d';
-            visualizerContext.strokeStyle = '#00ff9d';
-            visualizerContext.lineWidth = 2;
-
-            // Draw oscillator waveform
-            visualizerContext.beginPath();
-            const waveform = controls.waveform.value;
-            for (let x = 0; x < width; x++) {
-                const t = x / width;
-                let y;
-                switch (waveform) {
-                    case 'sine':
-                        y = Math.sin(2 * Math.PI * t);
-                        break;
-                    case 'square':
-                        y = t < 0.5 ? 1 : -1;
-                        break;
-                    case 'sawtooth':
-                        y = 2 * (t - Math.floor(t + 0.5));
-                        break;
-                    case 'triangle':
-                        y = 1 - 4 * Math.abs(Math.round(t) - t);
-                        break;
-                }
-                y = (y * 0.5 + 0.5) * height;
-                visualizerContext.lineTo(x, y);
-            }
-            visualizerContext.stroke();
-
-            // Draw filter response
-            const filterFreq = controls.filterCutoff.value;
-            const normalizedFreq = Math.log(filterFreq / 20) / Math.log(1000);
-            const filterX = normalizedFreq * width;
-            visualizerContext.beginPath();
-            visualizerContext.moveTo(0, height);
-            visualizerContext.lineTo(filterX, 0);
-            visualizerContext.lineTo(width, 0);
-            visualizerContext.globalAlpha = 0.2;
-            visualizerContext.fill();
-            visualizerContext.globalAlpha = 1;
-
-            // Draw envelope
-            const attackTime = parseFloat(controls.attack.value);
-            const decayTime = parseFloat(controls.decay.value);
-            const sustainLevel = parseFloat(controls.sustain.value);
-            const releaseTime = parseFloat(controls.release.value);
-
-            const totalTime = attackTime + decayTime + releaseTime;
-            const scaleX = width / totalTime;
-
-            visualizerContext.beginPath();
-            visualizerContext.moveTo(0, height);
-            visualizerContext.lineTo(attackTime * scaleX, 0);
-            visualizerContext.lineTo((attackTime + decayTime) * scaleX, (1 - sustainLevel) * height);
-            visualizerContext.lineTo(width - releaseTime * scaleX, (1 - sustainLevel) * height);
-            visualizerContext.lineTo(width, height);
-            visualizerContext.stroke();
-        }
-
-        function playNote(note, isArpeggiator = false) {
-            if (!note) {
-                console.error('Invalid note:', note);
-                return;
-            }
-
-            if (!isArpeggiator && arpeggiator.isOn) {
-                arpeggiator.addNote(note);
-                return;
-            }
-
-            if (activeVoices[note]) {
-                return;
-            }
-
-            const frequency = noteToFreq(note);
-            if (frequency === 0) {
-                console.error('Failed to get frequency for note:', note);
-                return;
-            }
-
-            const now = audioContext.currentTime;
-
-            // Create multiple oscillators for unison
-            const unisonCount = parseInt(controls.unison.value) || 1;
-            const detune = parseFloat(controls.detune.value) || 0;
-            const oscillators = [];
-
-            for (let i = 0; i < unisonCount; i++) {
-                const osc = audioContext.createOscillator();
-                osc.type = controls.waveform.value;
-                osc.frequency.setValueAtTime(frequency, now);
-
-                // Detune each oscillator
-                let detuneAmount = 0;
-                if (unisonCount > 1) {
-                    detuneAmount = (i / (unisonCount - 1) - 0.5) * detune;
-                }
-                osc.detune.setValueAtTime(detuneAmount, now);
-
-                oscillators.push(osc);
-            }
-
-            const gainNode = audioContext.createGain();
-            gainNode.gain.setValueAtTime(0, now);
-
-            const filter = audioContext.createBiquadFilter();
-            filter.type = controls.filterType.value;
-            filter.frequency.setValueAtTime(controls.filterCutoff.value, now);
-            filter.Q.setValueAtTime(controls.filterResonance.value, now);
-
-            // FM Modulation
-            const fmOsc = audioContext.createOscillator();
-            fmOsc.frequency.setValueAtTime(frequency * 2, now);
-            const fmGain = audioContext.createGain();
-            const fmAmount = parseFloat(controls.fmAmount.value) || 0;
-            fmGain.gain.setValueAtTime(fmAmount, now);
-            fmOsc.connect(fmGain);
-            fmGain.connect(filter.frequency);
-            fmOsc.start(now);
-
-            // Noise oscillator
-            const noiseOsc = audioContext.createBufferSource();
-            const noiseBuffer = audioContext.createBuffer(1, 44100, audioContext.sampleRate);
-            const noiseData = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < noiseData.length; i++) {
-                noiseData[i] = Math.random() * 2 - 1;
-            }
-            noiseOsc.buffer = noiseBuffer;
-            noiseOsc.loop = true;
-            const noiseGain = audioContext.createGain();
-            noiseGain.gain.setValueAtTime(parseFloat(controls.noiseAmount.value) || 0, now);
-            noiseOsc.connect(noiseGain);
-            noiseGain.connect(filter);
-            noiseOsc.start(now);
-
-            oscillators.forEach(osc => osc.connect(filter));
-            filter.connect(gainNode);
-            gainNode.connect(masterGainNode);
-
-            const attackTime = parseFloat(controls.attack.value);
-            const decayTime = parseFloat(controls.decay.value);
-            const sustainLevel = parseFloat(controls.sustain.value);
-
-            const peakLevel = 0.66 / Math.max(1, Math.sqrt(activeNotes.size));
-            const sustainedLevel = sustainLevel * peakLevel;
-
-            gainNode.gain.linearRampToValueAtTime(peakLevel, now + attackTime);
-            gainNode.gain.linearRampToValueAtTime(sustainedLevel, now + attackTime + decayTime);
-
-            // Filter envelope
-            const filterEnvAmount = parseFloat(controls.filterEnvAmount.value);
-            const filterStartFreq = filter.frequency.value;
-            const filterPeakFreq = Math.min(filterStartFreq * (1 + filterEnvAmount * 10), audioContext.sampleRate / 2);
-            filter.frequency.linearRampToValueAtTime(filterPeakFreq, now + attackTime);
-            filter.frequency.linearRampToValueAtTime(filterStartFreq, now + attackTime + decayTime);
-
-            oscillators.forEach(osc => osc.start(now));
-
-            // LFO
-            const lfo = audioContext.createOscillator();
-            const lfoGain = audioContext.createGain();
-            lfo.frequency.setValueAtTime(parseFloat(controls.lfoRate.value), now);
-            lfoGain.gain.setValueAtTime(parseFloat(controls.lfoAmount.value) || 0, now);
-            lfo.connect(lfoGain);
-            lfoGain.connect(filter.frequency);
-            lfo.start(now);
-
-            const voice = { oscillators, gainNode, filter, fmOsc, fmGain, noiseOsc, noiseGain, lfo, lfoGain };
-
-            activeVoices[note] = voice;
-            activeNotes.add(note);
-
-            const keyElement = document.querySelector(`.key[data-note="${note}"]`);
-            if (keyElement) {
-                keyElement.classList.add('active');
-            }
-        }
-
-        function releaseVoice(voice) {
-            const now = audioContext.currentTime;
-            const releaseTime = parseFloat(controls.release.value);
-
-            voice.gainNode.gain.cancelScheduledValues(now);
-            voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
-            voice.gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
-
-            setTimeout(() => {
-                voice.oscillators.forEach(osc => {
-                    osc.stop();
-                    osc.disconnect();
-                });
-                voice.gainNode.disconnect();
-                voice.filter.disconnect();
-                voice.fmOsc.stop();
-                voice.fmOsc.disconnect();
-                voice.fmGain.disconnect();
-                voice.noiseOsc.stop();
-                voice.noiseOsc.disconnect();
-                voice.noiseGain.disconnect();
-                voice.lfo.stop();
-                voice.lfo.disconnect();
-                voice.lfoGain.disconnect();
-            }, releaseTime * 1000);
-        }
-
-        function stopNote(note) {
-            if (arpeggiator.isOn) {
-                arpeggiator.removeNote(note);
-                return;
-            }
-
-            if (activeVoices[note]) {
-                releaseVoice(activeVoices[note]);
-                delete activeVoices[note];
-                activeNotes.delete(note);
-
-                const keyElement = document.querySelector(`.key[data-note="${note}"]`);
-                if (keyElement) {
-                    keyElement.classList.remove('active');
-                }
-            }
-        }
-
-        function noteToFreq(note) {
-            if (!note) {
-                console.error('Invalid note:', note);
-                return 0; // Return a default frequency or handle the error as appropriate
-            }
-
-            let noteName, octave;
-
-            if (note.length > 1 && !isNaN(note[note.length - 1])) {
-                // If the last character is a number (octave)
-                noteName = note.slice(0, -1);
-                octave = parseInt(note.slice(-1));
-            } else {
-                // If there's no octave specified, assume it's in the 4th octave
-                noteName = note;
-                octave = 4;
-            }
-
-            const noteIndex = notes.indexOf(noteName);
-            if (noteIndex === -1) {
-                console.error('Invalid note name:', noteName);
-                return 0; // Return a default frequency or handle the error as appropriate
-            }
-
-            return 440 * Math.pow(2, (noteIndex - 9) / 12 + (octave - 4));
-        }
-        function drawVisualizer() {
-            const width = visualizer.offsetWidth;
-            const height = visualizer.offsetHeight;
-            visualizer.width = width;
-            visualizer.height = height;
-
-            const analyser = audioContext.createAnalyser();
-            masterGainNode.connect(analyser);
-
-            analyser.fftSize = 2048;
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-
-            visualizerContext.clearRect(0, 0, width, height);
-
-            function draw() {
-                requestAnimationFrame(draw);
-                analyser.getByteTimeDomainData(dataArray);
-
-                visualizerContext.fillStyle = 'rgb(26, 26, 26)';
-                visualizerContext.fillRect(0, 0, width, height);
-
-                visualizerContext.lineWidth = 2;
-                visualizerContext.strokeStyle = '#00ff9d';
-                visualizerContext.beginPath();
-
-                const sliceWidth = width * 1.0 / bufferLength;
-                let x = 0;
-
-                for (let i = 0; i < bufferLength; i++) {
-                    const v = dataArray[i] / 128.0;
-                    const y = v * height / 2;
-
-                    if (i === 0) {
-                        visualizerContext.moveTo(x, y);
-                    } else {
-                        visualizerContext.lineTo(x, y);
-                    }
-
-                    x += sliceWidth;
-                }
-
-                visualizerContext.lineTo(width, height / 2);
-                visualizerContext.stroke();
-            }
-
-            draw();
-        }
-
-        function stopAllNotes() {
-            activeNotes.forEach(note => {
-                if (activeVoices[note]) {
-                    releaseVoice(activeVoices[note]);
-                    delete activeVoices[note];
-                }
-            });
-            activeNotes.clear();
-
-            const keys = document.querySelectorAll('.key.active');
-            keys.forEach(key => key.classList.remove('active'));
-        }
-
-        function updateSynthParams() {
-            Object.values(activeVoices).forEach(voice => {
-                const now = audioContext.currentTime;
-                voice.filter.type = controls.filterType.value;
-                voice.filter.frequency.setValueAtTime(parseFloat(controls.filterCutoff.value), now);
-                voice.filter.Q.setValueAtTime(parseFloat(controls.filterResonance.value), now);
-                voice.fmGain.gain.setValueAtTime(parseFloat(controls.fmAmount.value) || 0, now);
-                voice.lfo.frequency.setValueAtTime(parseFloat(controls.lfoRate.value) || 0, now);
-                voice.noiseGain.gain.setValueAtTime(parseFloat(controls.noiseAmount.value) || 0, now);
-                voice.lfoGain.gain.setValueAtTime(parseFloat(controls.lfoAmount.value) || 0, now);
-
-                // Update unison and detune
-                const unisonCount = parseInt(controls.unison.value) || 1;
-                const detune = parseFloat(controls.detune.value) || 0;
-
-                // If the number of oscillators has changed, we need to create or remove oscillators
-                while (voice.oscillators.length < unisonCount) {
-                    const newOsc = audioContext.createOscillator();
-                    newOsc.type = controls.waveform.value;
-                    newOsc.frequency.setValueAtTime(voice.oscillators[0].frequency.value, now);
-                    newOsc.connect(voice.filter);
-                    newOsc.start(now);
-                    voice.oscillators.push(newOsc);
-                }
-                while (voice.oscillators.length > unisonCount) {
-                    const oscToRemove = voice.oscillators.pop();
-                    oscToRemove.stop(now);
-                    oscToRemove.disconnect();
-                }
-
-                // Update detune for each oscillator
-                voice.oscillators.forEach((osc, i) => {
-                    osc.type = controls.waveform.value;
-                    let detuneAmount = 0;
-                    if (unisonCount > 1) {
-                        detuneAmount = (i / (unisonCount - 1) - 0.5) * detune;
-                    }
-                    osc.detune.setValueAtTime(detuneAmount, now);
-                });
-            });
-
-            // Update circular control display
-            document.querySelectorAll('.circular-control input[type="range"]').forEach(input => {
-                const value = parseFloat(input.value);
-                const min = parseFloat(input.min);
-                const max = parseFloat(input.max);
-                const normalizedValue = (value - min) / (max - min);
-                const rotation = normalizedValue * 270 - 135; // Map 0-1 to -135deg to 135deg
-                input.parentNode.style.setProperty('--rotation', `${rotation}deg`);
-            });
-        }
-
-        function handleCircularControlInteraction(event) {
-            const control = event.currentTarget;
-            const input = control.querySelector('input[type="range"]');
-            let startY = event.clientY;
-            let startValue = parseFloat(input.value);
-
-            function handleMouseMove(e) {
-                const deltaY = startY - e.clientY;
-                const range = input.max - input.min;
-                const valueChange = (deltaY / 100) * range;
-                let newValue = startValue + valueChange;
-                newValue = Math.max(input.min, Math.min(input.max, newValue));
-
-                input.value = newValue;
-                updateSynthParams();
-                input.dispatchEvent(new Event('change'));
-                e.preventDefault();
-            }
-
-            function handleMouseUp() {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-            }
-
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-        }
-
-        function initializeSynth() {
-            createPiano();
-            drawVisualizer();
-
-            let isMouseDown = false;
-            let lastPlayedNote = null;
-
-            const keys = document.querySelectorAll('.key');
-            keys.forEach(key => {
-                key.addEventListener('mousedown', (e) => {
-                    isMouseDown = true;
-                    const note = e.target.dataset.note;
-                    playNote(note);
-                    lastPlayedNote = note;
-                });
-
-                key.addEventListener('mouseenter', (e) => {
-                    if (isMouseDown) {
-                        const note = e.target.dataset.note;
-                        if (note !== lastPlayedNote) {
-                            stopNote(lastPlayedNote);
-                            playNote(note);
-                            lastPlayedNote = note;
-                        }
-                    }
-                });
-
-                key.addEventListener('mouseleave', (e) => {
-                    if (isMouseDown) {
-                        const note = e.target.dataset.note;
-                        stopNote(note);
-                    }
-                });
-            });
-
-            document.addEventListener('mouseup', () => {
-                if (isMouseDown) {
-                    stopNote(lastPlayedNote);
-                    isMouseDown = false;
-                    lastPlayedNote = null;
-                }
-            });
-
-            // Prevent text selection while dragging
-            document.getElementById('piano').addEventListener('selectstart', (e) => e.preventDefault());
-
-            // Arpeggiator controls
-            controls.arpToggle.addEventListener('change', (e) => {
-                arpeggiator.isOn = e.target.checked;
-                if (arpeggiator.isOn) {
-                    arpeggiator.start();
-                } else {
-                    arpeggiator.stop();
-                    stopAllNotes();
-                }
-            });
-
-            controls.arpPattern.addEventListener('change', (e) => {
-                arpeggiator.pattern = e.target.value;
-            });
-
-            controls.arpSpeed.addEventListener('input', (e) => {
-                arpeggiator.speed = parseInt(e.target.value);
-                if (arpeggiator.isOn) {
-                    arpeggiator.stop();
-                    arpeggiator.start();
-                }
-            });
-
-            // Keyboard controls
-            document.addEventListener('keydown', (event) => {
-                const note = keyboardMap[event.key.toLowerCase()];
-                if (note && !event.repeat) {
-                    playNote(note);
-                }
-            });
-
-            document.addEventListener('keyup', (event) => {
-                const note = keyboardMap[event.key.toLowerCase()];
-                if (note) {
-                    stopNote(note);
-                }
-            });
-
-            // Window blur event
-            window.addEventListener('blur', () => {
-                activeNotes.forEach(stopNote);
-            });
-
-            // Window resize event
-            window.addEventListener('resize', drawVisualizer);
-
-            // Add event listeners for all controls
-            Object.values(controls).forEach(control => {
-                control.addEventListener('input', updateSynthParams);
-                control.addEventListener('change', updateVisualizer);
-            });
-
-            // Add event listeners for circular controls
-            document.querySelectorAll('.circular-control').forEach(control => {
-                control.addEventListener('mousedown', handleCircularControlInteraction);
-            });
-
-            // Initialize audio context on user interaction
-            document.addEventListener('click', function initAudio() {
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-                document.removeEventListener('click', initAudio);
-            });
-
-            // Initial update of circular controls
-            updateSynthParams();
-        }
-
         // Initialize the synth when the DOM is fully loaded
-        document.addEventListener('DOMContentLoaded', initializeSynth);
+        document.addEventListener('DOMContentLoaded', () => Synth.initialize());
     </script>
 </body>
 
