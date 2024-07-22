@@ -207,6 +207,10 @@
                         <input type="range" id="fmAmount" min="0" max="1000" step="1" value="0">
                     </div>
                 </div>
+                <div class="control">
+                    <label for="fmToggle">FM On/Off</label>
+                    <input type="checkbox" id="fmToggle">
+                </div>
             </div>
             <div class="control-group">
                 <h2>Filter</h2>
@@ -267,6 +271,10 @@
             <div class="control-group">
                 <h2>LFO</h2>
                 <div class="control">
+                    <label for="lfoToggle">LFO On/Off</label>
+                    <input type="checkbox" id="lfoToggle">
+                </div>
+                <div class="control">
                     <label for="lfoRate">Rate</label>
                     <div class="circular-control">
                         <input type="range" id="lfoRate" min="0" max="20" step="0.1" value="0">
@@ -281,6 +289,10 @@
             </div>
             <div class="control-group">
                 <h2>Noise</h2>
+                <div class="control">
+                    <label for="noiseToggle">Noise On/Off</label>
+                    <input type="checkbox" id="noiseToggle">
+                </div>
                 <div class="control">
                     <label for="noiseAmount">Amount</label>
                     <div class="circular-control">
@@ -305,9 +317,9 @@
                     </select>
                 </div>
                 <div class="control">
-                    <label for="arpSpeed">Speed (ms)</label>
+                    <label for="arpSpeed">Speed</label>
                     <div class="circular-control">
-                        <input type="range" id="arpSpeed" min="50" max="500" step="10" value="200">
+                        <input type="range" id="arpSpeed" min="1" max="8" step="1" value="4">
                     </div>
                 </div>
             </div>
@@ -355,14 +367,17 @@
             activeVoices: {},
             activeNotes: new Set(),
             controls: {},
+            fmEnabled: false,
+            lfoEnabled: false,
+            noiseEnabled: false,
             arpeggiator: {
                 isOn: false,
                 pattern: 'up',
-                speed: 200,
+                speed: 200, // Default speed in milliseconds
                 notes: [],
                 currentIndex: 0,
                 intervalId: null
-            }
+            },
         };
 
         // Utility functions
@@ -428,39 +443,47 @@
                 const fmOsc = audioContext.createOscillator();
                 fmOsc.frequency.setValueAtTime(frequency * 2, now);
                 const fmGain = audioContext.createGain();
-                fmGain.gain.setValueAtTime(parseFloat(SynthState.controls.fmAmount.value) || 0, now);
+                fmGain.gain.setValueAtTime(0, now);
 
                 const noiseOsc = audioContext.createBufferSource();
                 noiseOsc.buffer = Util.createNoiseBuffer();
                 noiseOsc.loop = true;
                 const noiseGain = audioContext.createGain();
-                noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value) || 0, now);
+                noiseGain.gain.setValueAtTime(0, now);
 
                 const lfo = audioContext.createOscillator();
                 const lfoGain = audioContext.createGain();
                 lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value), now);
-                lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value) || 0, now);
+                lfoGain.gain.setValueAtTime(0, now);
 
                 // Connect nodes
                 oscillators.forEach(osc => osc.connect(filter));
                 filter.connect(gainNode);
                 gainNode.connect(compressor);
-                fmOsc.connect(fmGain);
-                fmGain.connect(filter.frequency);
-                noiseOsc.connect(noiseGain);
-                noiseGain.connect(filter);
-                lfo.connect(lfoGain);
-                lfoGain.connect(filter.frequency);
 
                 // Start oscillators
                 oscillators.forEach(osc => osc.start(now));
-                fmOsc.start(now);
-                noiseOsc.start(now);
-                lfo.start(now);
+
+                if (SynthState.fmEnabled) {
+                    fmOsc.connect(fmGain);
+                    fmGain.connect(filter.frequency);
+                    fmOsc.start(now);
+                }
+
+                if (SynthState.noiseEnabled) {
+                    noiseOsc.connect(noiseGain);
+                    noiseGain.connect(filter);
+                    noiseOsc.start(now);
+                }
+
+                if (SynthState.lfoEnabled) {
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(filter.frequency);
+                    lfo.start(now);
+                }
 
                 return { oscillators, gainNode, filter, fmOsc, fmGain, noiseOsc, noiseGain, lfo, lfoGain };
             },
-
             play(note, isArpeggiator = false) {
                 if (SynthState.arpeggiator.isOn && !isArpeggiator) {
                     Arpeggiator.addNote(note);
@@ -524,15 +547,24 @@
                     });
                     voice.gainNode.disconnect();
                     voice.filter.disconnect();
-                    voice.fmOsc.stop();
-                    voice.fmOsc.disconnect();
-                    voice.fmGain.disconnect();
-                    voice.noiseOsc.stop();
-                    voice.noiseOsc.disconnect();
-                    voice.noiseGain.disconnect();
-                    voice.lfo.stop();
-                    voice.lfo.disconnect();
-                    voice.lfoGain.disconnect();
+
+                    if (SynthState.fmEnabled) {
+                        voice.fmOsc.stop();
+                        voice.fmOsc.disconnect();
+                        voice.fmGain.disconnect();
+                    }
+
+                    if (SynthState.noiseEnabled) {
+                        voice.noiseOsc.stop();
+                        voice.noiseOsc.disconnect();
+                        voice.noiseGain.disconnect();
+                    }
+
+                    if (SynthState.lfoEnabled) {
+                        voice.lfo.stop();
+                        voice.lfo.disconnect();
+                        voice.lfoGain.disconnect();
+                    }
                 }, releaseTime * 1000);
 
                 delete SynthState.activeVoices[note];
@@ -567,7 +599,8 @@
                 this.stop();
                 SynthState.arpeggiator.currentIndex = 0;
                 this.playCurrentNote();
-                SynthState.arpeggiator.intervalId = setInterval(() => this.playNextNote(), SynthState.arpeggiator.speed);
+                const speed = SynthState.arpeggiator.speed;
+                SynthState.arpeggiator.intervalId = setInterval(() => this.playNextNote(), speed);
             },
 
             stop() {
@@ -576,6 +609,14 @@
                     SynthState.arpeggiator.intervalId = null;
                 }
                 Voice.stopAllNotes(true);
+            },
+
+            updateSpeed(speed) {
+                SynthState.arpeggiator.speed = speed;
+                if (SynthState.arpeggiator.isOn) {
+                    this.stop();
+                    this.start();
+                }
             },
 
             addNote(note) {
@@ -603,6 +644,7 @@
                 this.playCurrentNote();
             },
 
+            // Add this method to the Arpeggiator object to fix the functionality:
             playCurrentNote() {
                 if (SynthState.arpeggiator.notes.length === 0) return;
                 const note = SynthState.arpeggiator.notes[SynthState.arpeggiator.currentIndex];
@@ -783,6 +825,21 @@
                     });
                 });
 
+                SynthState.controls.fmToggle.addEventListener('change', (e) => {
+                    SynthState.fmEnabled = e.target.checked;
+                    Synth.updateParams();
+                });
+
+                SynthState.controls.lfoToggle.addEventListener('change', (e) => {
+                    SynthState.lfoEnabled = e.target.checked;
+                    Synth.updateParams();
+                });
+
+                SynthState.controls.noiseToggle.addEventListener('change', (e) => {
+                    SynthState.noiseEnabled = e.target.checked;
+                    Synth.updateParams();
+                });
+
                 document.addEventListener('mouseup', () => {
                     if (isMouseDown) {
                         Voice.release(lastPlayedNote);
@@ -810,7 +867,8 @@
                 });
 
                 SynthState.controls.arpSpeed.addEventListener('input', (e) => {
-                    SynthState.arpeggiator.speed = parseInt(e.target.value);
+                    const speedValue = parseInt(e.target.value);
+                    SynthState.arpeggiator.speed = 1000 / speedValue; // Convert to milliseconds (1 to 8 Hz)
                     if (SynthState.arpeggiator.isOn) {
                         Arpeggiator.stop();
                         Arpeggiator.start();
@@ -885,8 +943,16 @@
                     noiseAmount: document.getElementById('noiseAmount'),
                     arpToggle: document.getElementById('arpToggle'),
                     arpPattern: document.getElementById('arpPattern'),
-                    arpSpeed: document.getElementById('arpSpeed')
+                    arpSpeed: document.getElementById('arpSpeed'),
+                    fmToggle: document.getElementById('fmToggle'),
+                    lfoToggle: document.getElementById('lfoToggle'),
+                    noiseToggle: document.getElementById('noiseToggle'),
                 };
+
+                // Set initial states
+                SynthState.controls.fmToggle.checked = SynthState.fmEnabled;
+                SynthState.controls.lfoToggle.checked = SynthState.lfoEnabled;
+                SynthState.controls.noiseToggle.checked = SynthState.noiseEnabled;
 
                 UI.createPiano();
                 UI.initializeEventListeners();
@@ -900,10 +966,25 @@
                     voice.filter.type = SynthState.controls.filterType.value;
                     voice.filter.frequency.setValueAtTime(parseFloat(SynthState.controls.filterCutoff.value), now);
                     voice.filter.Q.setValueAtTime(parseFloat(SynthState.controls.filterResonance.value), now);
-                    voice.fmGain.gain.setValueAtTime(parseFloat(SynthState.controls.fmAmount.value) || 0, now);
-                    voice.lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value) || 0, now);
-                    voice.noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value) || 0, now);
-                    voice.lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value) || 0, now);
+
+                    if (SynthState.fmEnabled) {
+                        voice.fmGain.gain.setValueAtTime(parseFloat(SynthState.controls.fmAmount.value) || 0, now);
+                    } else {
+                        voice.fmGain.gain.setValueAtTime(0, now);
+                    }
+
+                    if (SynthState.lfoEnabled) {
+                        voice.lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value) || 0, now);
+                        voice.lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value) || 0, now);
+                    } else {
+                        voice.lfoGain.gain.setValueAtTime(0, now);
+                    }
+
+                    if (SynthState.noiseEnabled) {
+                        voice.noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value) || 0, now);
+                    } else {
+                        voice.noiseGain.gain.setValueAtTime(0, now);
+                    }
 
                     // Update unison and detune
                     const unisonCount = parseInt(SynthState.controls.unison.value) || 1;
@@ -934,6 +1015,11 @@
                         osc.detune.setValueAtTime(detuneAmount, now);
                     });
                 });
+
+                // Update arpeggiator speed
+                const arpSpeedValue = parseInt(SynthState.controls.arpSpeed.value);
+                const arpSpeed = 1000 / arpSpeedValue; // Convert to milliseconds (1 to 8 Hz)
+                Arpeggiator.updateSpeed(arpSpeed);
 
                 UI.updateCircularControls();
             },
