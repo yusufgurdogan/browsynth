@@ -797,8 +797,7 @@
                 let animationFrameId;
 
                 function draw() {
-                    animationFrameId = requestAnimationFrame(draw);
-
+                    requestAnimationFrame(draw);
                     analyser.getByteTimeDomainData(dataArray);
 
                     ctx.fillStyle = 'rgba(26, 26, 26, 0.2)';
@@ -826,10 +825,6 @@
                 }
 
                 draw();
-
-                return () => {
-                    cancelAnimationFrame(animationFrameId);
-                };
             },
 
             updateCircularControls() {
@@ -853,8 +848,7 @@
                     const deltaY = startY - e.clientY;
                     const range = input.max - input.min;
                     const valueChange = (deltaY / 100) * range;
-                    let newValue = startValue + valueChange;
-                    newValue = Math.max(input.min, Math.min(input.max, newValue));
+                    let newValue = Math.max(input.min, Math.min(input.max, startValue + valueChange));
 
                     input.value = newValue;
                     Synth.updateParams();
