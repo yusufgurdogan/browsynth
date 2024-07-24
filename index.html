@@ -574,11 +574,37 @@
                         });
                     }
 
-                    // Update oscillators
+                    // Update oscillators, unison, and detune
+                    const newUnisonCount = parseInt(SynthState.controls.unison.value) || 1;
+                    const newDetune = parseFloat(SynthState.controls.detune.value) || 0;
+
+                    // Adjust the number of oscillators if unison has changed
+                    while (oscillators.length < newUnisonCount) {
+                        const newOsc = audioContext.createOscillator();
+                        newOsc.type = SynthState.controls.waveform.value;
+                        newOsc.frequency.setValueAtTime(frequency, now);
+                        newOsc.start(now);
+                        oscillators.push(newOsc);
+                    }
+                    while (oscillators.length > newUnisonCount) {
+                        const oscToRemove = oscillators.pop();
+                        oscToRemove.stop(now);
+                        oscToRemove.disconnect();
+                    }
+
+                    // Update each oscillator
                     oscillators.forEach((osc, i) => {
                         osc.type = SynthState.controls.waveform.value;
-                        const detuneAmount = unisonCount > 1 ? (i / (unisonCount - 1) - 0.5) * detune : 0;
+                        const detuneAmount = newUnisonCount > 1 ? (i / (newUnisonCount - 1) - 0.5) * newDetune : 0;
                         osc.detune.setValueAtTime(detuneAmount, now);
+
+                        // Reconnect oscillator if filter state has changed
+                        osc.disconnect();
+                        if (SynthState.filterEnabled) {
+                            osc.connect(filter);
+                        } else {
+                            osc.connect(gainNode);
+                        }
                     });
 
                     // Update FM
@@ -1021,7 +1047,9 @@
                 SynthState.controls.lfoToggle.addEventListener('change', () => Synth.updateParams('lfoToggle'));
                 SynthState.controls.lfoRate.addEventListener('input', () => Synth.updateParams('lfoRate'));
                 SynthState.controls.lfoAmount.addEventListener('input', () => Synth.updateParams('lfoAmount'));
-
+                SynthState.controls.unison.addEventListener('input', () => Synth.updateParams('unison'));
+                SynthState.controls.detune.addEventListener('input', () => Synth.updateParams('detune'));
+                SynthState.controls.waveform.addEventListener('change', () => Synth.updateParams('waveform'));
 
                 // Keyboard controls
                 document.addEventListener('keydown', (event) => {
@@ -1115,6 +1143,11 @@
             },
 
             updateParams(changedParam) {
+                if (changedParam === 'unison' || changedParam === 'detune' || changedParam === 'waveform') {
+                    Object.values(SynthState.activeVoices).forEach(voice => {
+                        voice.updateVoice();
+                    });
+                }
                 if (changedParam === 'filterToggle') {
                     SynthState.filterEnabled = SynthState.controls.filterToggle.checked;
                 } else if (changedParam === 'noiseToggle') {
