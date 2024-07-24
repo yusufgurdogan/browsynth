@@ -259,6 +259,10 @@
             <div class="control-group">
                 <h2>Filter</h2>
                 <div class="control">
+                    <label for="filterToggle">Filter On/Off</label>
+                    <input type="checkbox" id="filterToggle" checked>
+                </div>
+                <div class="control">
                     <label for="filterType">Filter Type</label>
                     <select id="filterType">
                         <option value="lowpass">Lowpass</option>
@@ -388,31 +392,6 @@
         let compressor;
         let analyser;
 
-        function initAudioContext() {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                masterGainNode = audioContext.createGain();
-                masterGainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
-                compressor = audioContext.createDynamicsCompressor();
-                compressor.threshold.setValueAtTime(-24, audioContext.currentTime);
-                compressor.knee.setValueAtTime(30, audioContext.currentTime);
-                compressor.ratio.setValueAtTime(12, audioContext.currentTime);
-                compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
-                compressor.release.setValueAtTime(0.25, audioContext.currentTime);
-                masterGainNode.connect(compressor);
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 2048;
-                compressor.connect(analyser);
-                analyser.connect(audioContext.destination);
-            }
-            if (audioContext.state === 'suspended') {
-                audioContext.resume().then(() => {
-                    UI.updateVisualizer();
-                });
-            } else {
-                UI.updateVisualizer();
-            }
-        }
         // Synth configuration object
         const SynthConfig = {
             waveforms: ['sine', 'square', 'sawtooth', 'triangle'],
@@ -446,6 +425,12 @@
                 notes: [],
                 currentIndex: 0,
                 intervalId: null
+            },
+            filterEnabled: true,
+            filterSettings: {
+                type: 'lowpass',
+                frequency: 1000,
+                Q: 0
             },
         };
 
@@ -496,10 +481,8 @@
                     const osc = audioContext.createOscillator();
                     osc.type = SynthState.controls.waveform.value;
                     osc.frequency.setValueAtTime(frequency, now);
-
                     const detuneAmount = unisonCount > 1 ? (i / (unisonCount - 1) - 0.5) * detune : 0;
                     osc.detune.setValueAtTime(detuneAmount, now);
-
                     oscillators.push(osc);
                 }
 
@@ -507,9 +490,17 @@
                 gainNode.gain.setValueAtTime(0, now);
 
                 const filter = audioContext.createBiquadFilter();
-                filter.type = SynthState.controls.filterType.value;
-                filter.frequency.setValueAtTime(SynthState.controls.filterCutoff.value, now);
-                filter.Q.setValueAtTime(SynthState.controls.filterResonance.value, now);
+                filter.type = SynthState.filterSettings.type;
+                filter.frequency.setValueAtTime(SynthState.filterSettings.frequency, now);
+                filter.Q.setValueAtTime(SynthState.filterSettings.Q, now);
+
+                // Connect nodes based on filter state
+                if (SynthState.filterEnabled) {
+                    oscillators.forEach(osc => osc.connect(filter));
+                    filter.connect(gainNode);
+                } else {
+                    oscillators.forEach(osc => osc.connect(gainNode));
+                }
 
                 const fmOsc = audioContext.createOscillator();
                 fmOsc.frequency.setValueAtTime(frequency * 2, now);
@@ -526,35 +517,86 @@
                 const lfoGain = audioContext.createGain();
                 lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value), now);
                 lfoGain.gain.setValueAtTime(0, now);
-
-                // Connect nodes
-                oscillators.forEach(osc => osc.connect(filter));
-                filter.connect(gainNode);
                 gainNode.connect(compressor);
-
-                // Start oscillators
-                oscillators.forEach(osc => osc.start(now));
 
                 if (SynthState.fmEnabled) {
                     fmOsc.connect(fmGain);
                     fmGain.connect(filter.frequency);
-                    fmOsc.start(now);
                 }
 
                 if (SynthState.noiseEnabled) {
                     noiseOsc.connect(noiseGain);
                     noiseGain.connect(filter);
-                    noiseOsc.start(now);
                 }
 
                 if (SynthState.lfoEnabled) {
                     lfo.connect(lfoGain);
                     lfoGain.connect(filter.frequency);
-                    lfo.start(now);
                 }
 
-                return { oscillators, gainNode, filter, fmOsc, fmGain, noiseOsc, noiseGain, lfo, lfoGain };
+                // Start oscillators
+                oscillators.forEach(osc => osc.start(now));
+                fmOsc.start(now);
+                noiseOsc.start(now);
+                lfo.start(now);
+
+                const updateVoice = () => {
+                    const now = audioContext.currentTime;
+
+                    // Update filter
+                    if (SynthState.filterEnabled) {
+                        filter.type = SynthState.filterSettings.type;
+                        filter.frequency.cancelScheduledValues(now);
+                        filter.frequency.setValueAtTime(SynthState.filterSettings.frequency, now);
+                        filter.Q.cancelScheduledValues(now);
+                        filter.Q.setValueAtTime(SynthState.filterSettings.Q, now);
+
+                        oscillators.forEach(osc => {
+                            osc.disconnect();
+                            osc.connect(filter);
+                        });
+                        filter.disconnect();
+                        filter.connect(gainNode);
+                    } else {
+                        oscillators.forEach(osc => {
+                            osc.disconnect();
+                            osc.connect(gainNode);
+                        });
+                    }
+
+                    // Update oscillators
+                    oscillators.forEach((osc, i) => {
+                        osc.type = SynthState.controls.waveform.value;
+                        const detuneAmount = unisonCount > 1 ? (i / (unisonCount - 1) - 0.5) * detune : 0;
+                        osc.detune.setValueAtTime(detuneAmount, now);
+                    });
+
+                    // Update FM
+                    if (SynthState.fmEnabled) {
+                        fmGain.gain.setValueAtTime(parseFloat(SynthState.controls.fmAmount.value), now);
+                    } else {
+                        fmGain.gain.setValueAtTime(0, now);
+                    }
+
+                    // Update LFO
+                    if (SynthState.lfoEnabled) {
+                        lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value), now);
+                        lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value), now);
+                    } else {
+                        lfoGain.gain.setValueAtTime(0, now);
+                    }
+
+                    // Update Noise
+                    if (SynthState.noiseEnabled) {
+                        noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value), now);
+                    } else {
+                        noiseGain.gain.setValueAtTime(0, now);
+                    }
+                };
+
+                return { oscillators, gainNode, filter, fmOsc, fmGain, noiseOsc, noiseGain, lfo, lfoGain, updateVoice };
             },
+
             play(note, isArpeggiator = false) {
                 if (SynthState.arpeggiator.isOn && !isArpeggiator) {
                     Arpeggiator.addNote(note);
@@ -562,7 +604,6 @@
                 }
                 if (SynthState.activeVoices[note]) return;
 
-                // Implement polyphony limiting
                 if (Object.keys(SynthState.activeVoices).length >= SynthConfig.maxPolyphony) {
                     const oldestNote = Object.keys(SynthState.activeVoices)[0];
                     this.release(oldestNote);
@@ -584,16 +625,22 @@
                 voice.gainNode.gain.linearRampToValueAtTime(peakLevel, now + attackTime);
                 voice.gainNode.gain.linearRampToValueAtTime(sustainedLevel, now + attackTime + decayTime);
 
-                // Apply filter envelope
+                // Filter envelope
                 const filterEnvAmount = parseFloat(SynthState.controls.filterEnvAmount.value);
-                const filterStartFreq = voice.filter.frequency.value;
+                const filterStartFreq = SynthState.filterSettings.frequency;
                 const filterPeakFreq = Math.min(filterStartFreq * (1 + filterEnvAmount * 10), audioContext.sampleRate / 2);
-                voice.filter.frequency.linearRampToValueAtTime(filterPeakFreq, now + attackTime);
-                voice.filter.frequency.linearRampToValueAtTime(filterStartFreq, now + attackTime + decayTime);
+
+                if (SynthState.filterEnabled) {
+                    voice.filter.frequency.cancelScheduledValues(now);
+                    voice.filter.frequency.setValueAtTime(filterStartFreq, now);
+                    voice.filter.frequency.linearRampToValueAtTime(filterPeakFreq, now + attackTime);
+                    voice.filter.frequency.linearRampToValueAtTime(filterStartFreq, now + attackTime + decayTime);
+                }
 
                 const keyElement = document.querySelector(`.key[data-note="${note}"]`);
                 if (keyElement) keyElement.classList.add('active');
             },
+
             release(note, isArpeggiator = false) {
                 if (SynthState.arpeggiator.isOn && !isArpeggiator) {
                     Arpeggiator.removeNote(note);
@@ -617,24 +664,15 @@
                     });
                     voice.gainNode.disconnect();
                     voice.filter.disconnect();
-
-                    if (SynthState.fmEnabled) {
-                        voice.fmOsc.stop();
-                        voice.fmOsc.disconnect();
-                        voice.fmGain.disconnect();
-                    }
-
-                    if (SynthState.noiseEnabled) {
-                        voice.noiseOsc.stop();
-                        voice.noiseOsc.disconnect();
-                        voice.noiseGain.disconnect();
-                    }
-
-                    if (SynthState.lfoEnabled) {
-                        voice.lfo.stop();
-                        voice.lfo.disconnect();
-                        voice.lfoGain.disconnect();
-                    }
+                    voice.fmOsc.stop();
+                    voice.fmOsc.disconnect();
+                    voice.fmGain.disconnect();
+                    voice.noiseOsc.stop();
+                    voice.noiseOsc.disconnect();
+                    voice.noiseGain.disconnect();
+                    voice.lfo.stop();
+                    voice.lfo.disconnect();
+                    voice.lfoGain.disconnect();
                 }, releaseTime * 1000);
 
                 delete SynthState.activeVoices[note];
@@ -794,8 +832,6 @@
                 ctx.lineWidth = 2;
                 ctx.strokeStyle = '#00ff9d';
 
-                let animationFrameId;
-
                 function draw() {
                     requestAnimationFrame(draw);
                     analyser.getByteTimeDomainData(dataArray);
@@ -852,7 +888,7 @@
 
                     input.value = newValue;
                     Synth.updateParams();
-                    input.dispatchEvent(new Event('change'));
+                    input.dispatchEvent(new Event('input'));
                     e.preventDefault();
                 }
 
@@ -866,7 +902,6 @@
             },
 
             initializeEventListeners() {
-                // Piano key events
                 const keys = document.querySelectorAll('.key');
                 let isMouseDown = false;
                 let lastPlayedNote = null;
@@ -898,21 +933,6 @@
                     });
                 });
 
-                SynthState.controls.fmToggle.addEventListener('change', (e) => {
-                    SynthState.fmEnabled = e.target.checked;
-                    Synth.updateParams();
-                });
-
-                SynthState.controls.lfoToggle.addEventListener('change', (e) => {
-                    SynthState.lfoEnabled = e.target.checked;
-                    Synth.updateParams();
-                });
-
-                SynthState.controls.noiseToggle.addEventListener('change', (e) => {
-                    SynthState.noiseEnabled = e.target.checked;
-                    Synth.updateParams();
-                });
-
                 document.addEventListener('mouseup', () => {
                     if (isMouseDown) {
                         Voice.release(lastPlayedNote);
@@ -921,8 +941,16 @@
                     }
                 });
 
-                // Prevent text selection while dragging
                 document.getElementById('piano').addEventListener('selectstart', (e) => e.preventDefault());
+
+                // Control event listeners
+                Object.entries(SynthState.controls).forEach(([key, control]) => {
+                    if (control.type === 'checkbox') {
+                        control.addEventListener('change', () => Synth.updateParams(key));
+                    } else {
+                        control.addEventListener('input', () => Synth.updateParams(key));
+                    }
+                });
 
                 // Arpeggiator controls
                 SynthState.controls.arpToggle.addEventListener('change', (e) => {
@@ -936,24 +964,11 @@
                     }
                 });
 
-                SynthState.controls.arpSpeed.addEventListener('input', () => {
-                    Arpeggiator.updateSpeed();
-                });
+                SynthState.controls.filterToggle.addEventListener('change', () => Synth.updateParams('filterToggle'));
 
-                SynthState.controls.arpClock.addEventListener('change', () => {
-                    Arpeggiator.updateSpeed();
-                });
-
-                SynthState.controls.arpPattern.addEventListener('change', () => {
-                    Arpeggiator.updateSpeed();
-                });
-
-                if (SynthState.controls.arpClock) {
-                    SynthState.controls.arpClock.addEventListener('change', (e) => {
-                        SynthState.arpeggiator.clock = e.target.value;
-                        Arpeggiator.updateSpeed();
-                    });
-                }
+                SynthState.controls.arpSpeed.addEventListener('input', Arpeggiator.updateSpeed);
+                SynthState.controls.arpClock.addEventListener('change', Arpeggiator.updateSpeed);
+                SynthState.controls.arpPattern.addEventListener('change', Arpeggiator.updateSpeed);
 
                 // Keyboard controls
                 document.addEventListener('keydown', (event) => {
@@ -970,23 +985,9 @@
                     }
                 });
 
-                // Window blur event
-                window.addEventListener('blur', () => {
-                    Voice.stopAllNotes();
-                });
+                window.addEventListener('blur', Voice.stopAllNotes);
+                window.addEventListener('resize', this.updateVisualizer);
 
-                // Window resize event
-                window.addEventListener('resize', () => {
-                    this.updateVisualizer();
-                });
-
-                // Add event listeners for all controls
-                Object.values(SynthState.controls).forEach(control => {
-                    control.addEventListener('input', Synth.updateParams);
-                    control.addEventListener('change', this.updateVisualizer);
-                });
-
-                // Add event listeners for circular controls
                 document.querySelectorAll('.circular-control').forEach(control => {
                     control.addEventListener('mousedown', this.handleCircularControlInteraction);
                 });
@@ -1000,17 +1001,36 @@
                 const startModal = document.getElementById('startModal');
 
                 startButton.addEventListener('click', () => {
-                    initAudioContext();
+                    this.initAudioContext();
                     startModal.style.display = 'none';
                     this.start();
                 });
             },
+
+            initAudioContext() {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGainNode = audioContext.createGain();
+                masterGainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
+                compressor = audioContext.createDynamicsCompressor();
+                compressor.threshold.setValueAtTime(-24, audioContext.currentTime);
+                compressor.knee.setValueAtTime(30, audioContext.currentTime);
+                compressor.ratio.setValueAtTime(12, audioContext.currentTime);
+                compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
+                compressor.release.setValueAtTime(0.25, audioContext.currentTime);
+                masterGainNode.connect(compressor);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 2048;
+                compressor.connect(analyser);
+                analyser.connect(audioContext.destination);
+            },
+
             start() {
                 SynthState.controls = {
                     waveform: document.getElementById('waveform'),
                     unison: document.getElementById('unison'),
                     detune: document.getElementById('detune'),
                     fmAmount: document.getElementById('fmAmount'),
+                    filterToggle: document.getElementById('filterToggle'),
                     filterType: document.getElementById('filterType'),
                     filterCutoff: document.getElementById('filterCutoff'),
                     filterResonance: document.getElementById('filterResonance'),
@@ -1031,7 +1051,6 @@
                     noiseToggle: document.getElementById('noiseToggle'),
                 };
 
-                // Set initial states
                 SynthState.controls.fmToggle.checked = SynthState.fmEnabled;
                 SynthState.controls.lfoToggle.checked = SynthState.lfoEnabled;
                 SynthState.controls.noiseToggle.checked = SynthState.noiseEnabled;
@@ -1042,60 +1061,20 @@
                 this.updateParams();
             },
 
-            updateParams() {
+            updateParams(changedParam) {
+                if (changedParam === 'filterToggle') {
+                    SynthState.filterEnabled = SynthState.controls.filterToggle.checked;
+                }
+
+                SynthState.filterSettings.type = SynthState.controls.filterType.value;
+                SynthState.filterSettings.frequency = parseFloat(SynthState.controls.filterCutoff.value);
+                SynthState.filterSettings.Q = parseFloat(SynthState.controls.filterResonance.value);
+                SynthState.fmEnabled = SynthState.controls.fmToggle.checked;
+                SynthState.lfoEnabled = SynthState.controls.lfoToggle.checked;
+                SynthState.noiseEnabled = SynthState.controls.noiseToggle.checked;
+
                 Object.values(SynthState.activeVoices).forEach(voice => {
-                    const now = audioContext.currentTime;
-                    voice.filter.type = SynthState.controls.filterType.value;
-                    voice.filter.frequency.setValueAtTime(parseFloat(SynthState.controls.filterCutoff.value), now);
-                    voice.filter.Q.setValueAtTime(parseFloat(SynthState.controls.filterResonance.value), now);
-
-                    if (SynthState.fmEnabled) {
-                        voice.fmGain.gain.setValueAtTime(parseFloat(SynthState.controls.fmAmount.value) || 0, now);
-                    } else {
-                        voice.fmGain.gain.setValueAtTime(0, now);
-                    }
-
-                    if (SynthState.lfoEnabled) {
-                        voice.lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value) || 0, now);
-                        voice.lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value) || 0, now);
-                    } else {
-                        voice.lfoGain.gain.setValueAtTime(0, now);
-                    }
-
-                    if (SynthState.noiseEnabled) {
-                        voice.noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value) || 0, now);
-                    } else {
-                        voice.noiseGain.gain.setValueAtTime(0, now);
-                    }
-
-                    // Update unison and detune
-                    const unisonCount = parseInt(SynthState.controls.unison.value) || 1;
-                    const detune = parseFloat(SynthState.controls.detune.value) || 0;
-
-                    // If the number of oscillators has changed, we need to create or remove oscillators
-                    while (voice.oscillators.length < unisonCount) {
-                        const newOsc = audioContext.createOscillator();
-                        newOsc.type = SynthState.controls.waveform.value;
-                        newOsc.frequency.setValueAtTime(voice.oscillators[0].frequency.value, now);
-                        newOsc.connect(voice.filter);
-                        newOsc.start(now);
-                        voice.oscillators.push(newOsc);
-                    }
-                    while (voice.oscillators.length > unisonCount) {
-                        const oscToRemove = voice.oscillators.pop();
-                        oscToRemove.stop(now);
-                        oscToRemove.disconnect();
-                    }
-
-                    // Update detune for each oscillator
-                    voice.oscillators.forEach((osc, i) => {
-                        osc.type = SynthState.controls.waveform.value;
-                        let detuneAmount = 0;
-                        if (unisonCount > 1) {
-                            detuneAmount = (i / (unisonCount - 1) - 0.5) * detune;
-                        }
-                        osc.detune.setValueAtTime(detuneAmount, now);
-                    });
+                    voice.updateVoice();
                 });
 
                 UI.updateCircularControls();
