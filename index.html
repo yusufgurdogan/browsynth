@@ -516,23 +516,33 @@
                 const lfo = audioContext.createOscillator();
                 const lfoGain = audioContext.createGain();
                 lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value), now);
-                lfoGain.gain.setValueAtTime(0, now);
-                gainNode.connect(compressor);
+                lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value), now);
 
-                if (SynthState.fmEnabled) {
-                    fmOsc.connect(fmGain);
-                    fmGain.connect(filter.frequency);
+                // Connect LFO
+                if (SynthState.lfoEnabled) {
+                    lfo.connect(lfoGain);
+                    lfoGain.connect(filter.frequency); // Connect to filter frequency
+                }
+
+                // Connect nodes
+                if (SynthState.filterEnabled) {
+                    oscillators.forEach(osc => osc.connect(filter));
+                    filter.connect(gainNode);
+                } else {
+                    oscillators.forEach(osc => osc.connect(gainNode));
                 }
 
                 if (SynthState.noiseEnabled) {
                     noiseOsc.connect(noiseGain);
-                    noiseGain.connect(filter);
+                    noiseGain.connect(SynthState.filterEnabled ? filter : gainNode);
                 }
 
                 if (SynthState.lfoEnabled) {
                     lfo.connect(lfoGain);
                     lfoGain.connect(filter.frequency);
                 }
+
+                gainNode.connect(compressor);
 
                 // Start oscillators
                 oscillators.forEach(osc => osc.start(now));
@@ -578,19 +588,26 @@
                         fmGain.gain.setValueAtTime(0, now);
                     }
 
+                    // Update Noise
+                    if (SynthState.noiseEnabled) {
+                        noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value), now);
+                        noiseOsc.connect(noiseGain);
+                        noiseGain.connect(SynthState.filterEnabled ? filter : gainNode);
+                    } else {
+                        noiseGain.gain.setValueAtTime(0, now);
+                        noiseOsc.disconnect();
+                        noiseGain.disconnect();
+                    }
+
                     // Update LFO
                     if (SynthState.lfoEnabled) {
                         lfo.frequency.setValueAtTime(parseFloat(SynthState.controls.lfoRate.value), now);
                         lfoGain.gain.setValueAtTime(parseFloat(SynthState.controls.lfoAmount.value), now);
+                        lfo.connect(lfoGain);
+                        lfoGain.connect(filter.frequency);
                     } else {
-                        lfoGain.gain.setValueAtTime(0, now);
-                    }
-
-                    // Update Noise
-                    if (SynthState.noiseEnabled) {
-                        noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value), now);
-                    } else {
-                        noiseGain.gain.setValueAtTime(0, now);
+                        lfo.disconnect();
+                        lfoGain.disconnect();
                     }
                 };
 
@@ -630,6 +647,23 @@
                 const filterStartFreq = SynthState.filterSettings.frequency;
                 const filterPeakFreq = Math.min(filterStartFreq * (1 + filterEnvAmount * 10), audioContext.sampleRate / 2);
 
+                // Apply noise envelope
+                if (SynthState.noiseEnabled) {
+                    const noiseAmount = parseFloat(SynthState.controls.noiseAmount.value);
+                    voice.noiseGain.gain.cancelScheduledValues(now);
+                    voice.noiseGain.gain.setValueAtTime(0, now);
+                    voice.noiseGain.gain.linearRampToValueAtTime(noiseAmount, now + attackTime);
+                    voice.noiseGain.gain.linearRampToValueAtTime(noiseAmount * sustainLevel, now + attackTime + decayTime);
+                }
+
+                // Apply LFO envelope
+                if (SynthState.lfoEnabled) {
+                    const lfoAmount = parseFloat(SynthState.controls.lfoAmount.value);
+                    voice.lfoGain.gain.cancelScheduledValues(now);
+                    voice.lfoGain.gain.setValueAtTime(0, now);
+                    voice.lfoGain.gain.linearRampToValueAtTime(lfoAmount, now + attackTime);
+                }
+
                 if (SynthState.filterEnabled) {
                     voice.filter.frequency.cancelScheduledValues(now);
                     voice.filter.frequency.setValueAtTime(filterStartFreq, now);
@@ -656,6 +690,20 @@
                 voice.gainNode.gain.cancelScheduledValues(now);
                 voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
                 voice.gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
+
+                // Apply noise release
+                if (SynthState.noiseEnabled) {
+                    voice.noiseGain.gain.cancelScheduledValues(now);
+                    voice.noiseGain.gain.setValueAtTime(voice.noiseGain.gain.value, now);
+                    voice.noiseGain.gain.linearRampToValueAtTime(0, now + releaseTime);
+                }
+
+                // Apply LFO release
+                if (SynthState.lfoEnabled) {
+                    voice.lfoGain.gain.cancelScheduledValues(now);
+                    voice.lfoGain.gain.setValueAtTime(voice.lfoGain.gain.value, now);
+                    voice.lfoGain.gain.linearRampToValueAtTime(0, now + releaseTime);
+                }
 
                 setTimeout(() => {
                     voice.oscillators.forEach(osc => {
@@ -965,10 +1013,15 @@
                 });
 
                 SynthState.controls.filterToggle.addEventListener('change', () => Synth.updateParams('filterToggle'));
-
                 SynthState.controls.arpSpeed.addEventListener('input', Arpeggiator.updateSpeed);
                 SynthState.controls.arpClock.addEventListener('change', Arpeggiator.updateSpeed);
                 SynthState.controls.arpPattern.addEventListener('change', Arpeggiator.updateSpeed);
+                SynthState.controls.noiseToggle.addEventListener('change', () => Synth.updateParams('noiseToggle'));
+                SynthState.controls.noiseAmount.addEventListener('input', () => Synth.updateParams('noiseAmount'));
+                SynthState.controls.lfoToggle.addEventListener('change', () => Synth.updateParams('lfoToggle'));
+                SynthState.controls.lfoRate.addEventListener('input', () => Synth.updateParams('lfoRate'));
+                SynthState.controls.lfoAmount.addEventListener('input', () => Synth.updateParams('lfoAmount'));
+
 
                 // Keyboard controls
                 document.addEventListener('keydown', (event) => {
@@ -1064,14 +1117,16 @@
             updateParams(changedParam) {
                 if (changedParam === 'filterToggle') {
                     SynthState.filterEnabled = SynthState.controls.filterToggle.checked;
+                } else if (changedParam === 'noiseToggle') {
+                    SynthState.noiseEnabled = SynthState.controls.noiseToggle.checked;
+                } else if (changedParam === 'lfoToggle') {
+                    SynthState.lfoEnabled = SynthState.controls.lfoToggle.checked;
                 }
 
                 SynthState.filterSettings.type = SynthState.controls.filterType.value;
                 SynthState.filterSettings.frequency = parseFloat(SynthState.controls.filterCutoff.value);
                 SynthState.filterSettings.Q = parseFloat(SynthState.controls.filterResonance.value);
                 SynthState.fmEnabled = SynthState.controls.fmToggle.checked;
-                SynthState.lfoEnabled = SynthState.controls.lfoToggle.checked;
-                SynthState.noiseEnabled = SynthState.controls.noiseToggle.checked;
 
                 Object.values(SynthState.activeVoices).forEach(voice => {
                     voice.updateVoice();
