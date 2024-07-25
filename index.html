@@ -1450,34 +1450,43 @@
 
                 blob.arrayBuffer().then(arrayBuffer => {
                     audioContext.decodeAudioData(arrayBuffer, (audioBuffer) => {
-                        const wav = this.audioBufferToWav(audioBuffer);
-                        const wavBlob = new Blob([new DataView(wav)], { type: 'audio/wav' });
+                        // Create a new AudioBuffer with the desired sample rate
+                        const offlineCtx = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.duration * 22050, 22050);
+                        const source = offlineCtx.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(offlineCtx.destination);
+                        source.start();
 
-                        const url = URL.createObjectURL(wavBlob);
-                        const a = document.createElement('a');
-                        document.body.appendChild(a);
-                        a.style = 'display: none';
-                        a.href = url;
-                        a.download = 'browsynth_recording.wav';
-                        a.click();
-                        window.URL.revokeObjectURL(url);
+                        offlineCtx.startRendering().then(renderedBuffer => {
+                            const wav = this.audioBufferToWav(renderedBuffer);
+                            const wavBlob = new Blob([new DataView(wav)], { type: 'audio/wav' });
+
+                            const url = URL.createObjectURL(wavBlob);
+                            const a = document.createElement('a');
+                            document.body.appendChild(a);
+                            a.style = 'display: none';
+                            a.href = url;
+                            a.download = 'browsynth_recording.wav';
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                        });
                     });
                 });
             },
 
             audioBufferToWav(buffer) {
                 const numChannels = buffer.numberOfChannels;
-                const sampleRate = buffer.sampleRate;
+                const sampleRate = 22050; // Reduced from 44100
                 const format = 1; // PCM
-                const bitDepth = 16;
+                const bitDepth = 8; // Reduced from 16
 
-                let result = new ArrayBuffer(44 + buffer.length * numChannels * 2);
+                let result = new ArrayBuffer(44 + buffer.length * numChannels);
                 let view = new DataView(result);
 
                 // RIFF identifier
                 this.writeString(view, 0, 'RIFF');
                 // RIFF chunk length
-                view.setUint32(4, 36 + buffer.length * numChannels * 2, true);
+                view.setUint32(4, 36 + buffer.length * numChannels, true);
                 // RIFF type
                 this.writeString(view, 8, 'WAVE');
                 // format chunk identifier
@@ -1491,15 +1500,15 @@
                 // sample rate
                 view.setUint32(24, sampleRate, true);
                 // byte rate (sample rate * block align)
-                view.setUint32(28, sampleRate * numChannels * 2, true);
+                view.setUint32(28, sampleRate * numChannels, true);
                 // block align (channel count * bytes per sample)
-                view.setUint16(32, numChannels * 2, true);
+                view.setUint16(32, numChannels, true);
                 // bits per sample
                 view.setUint16(34, bitDepth, true);
                 // data chunk identifier
                 this.writeString(view, 36, 'data');
                 // data chunk length
-                view.setUint32(40, buffer.length * numChannels * 2, true);
+                view.setUint32(40, buffer.length * numChannels, true);
 
                 const length = buffer.length;
                 const channels = buffer.numberOfChannels;
@@ -1507,15 +1516,14 @@
                 for (let i = 0; i < length; i++) {
                     for (let channel = 0; channel < channels; channel++) {
                         let sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-                        sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-                        view.setInt16(offset, sample, true);
-                        offset += 2;
+                        sample = (sample + 1) / 2 * 255; // Convert to 0-255 range
+                        view.setUint8(offset, sample); // Use 8-bit samples
+                        offset++;
                     }
                 }
 
                 return result;
             },
-
             writeString(view, offset, string) {
                 for (let i = 0; i < string.length; i++) {
                     view.setUint8(offset + i, string.charCodeAt(i));
