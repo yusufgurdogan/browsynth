@@ -715,6 +715,7 @@
                 const voice = this.create(note);
                 SynthState.activeVoices[note] = voice;
                 SynthState.activeNotes.add(note);
+                Synth.recordNoteEvent(note, true);
 
                 const now = audioContext.currentTime;
                 const attackTime = parseFloat(SynthState.controls.attack.value);
@@ -768,6 +769,7 @@
                 }
 
                 const voice = SynthState.activeVoices[note];
+                Synth.recordNoteEvent(note, false);
                 if (!voice) return;
 
                 const now = audioContext.currentTime;
@@ -977,7 +979,7 @@
                     const sliceWidth = width * 1.0 / bufferLength;
                     let x = 0;
 
-                    for (let i = 0; i < bufferLength; i += 2) {  // Skip every other sample
+                    for (let i = 0; i < bufferLength; i++) {
                         const v = dataArray[i] / 128.0;
                         const y = v * height / 2;
 
@@ -987,7 +989,7 @@
                             ctx.lineTo(x, y);
                         }
 
-                        x += sliceWidth * 2;  // Double the step size
+                        x += sliceWidth;
                     }
 
                     ctx.lineTo(width, height / 2);
@@ -1153,9 +1155,12 @@
         const Synth = {
             recorder: null,
             recordedChunks: [],
+            recordedNotes: [],
+            recordingStartTime: 0,
             audioContext: null,
             compressor: null,
             playbackAudio: null,
+            playbackSource: null,
 
             initialize() {
                 const startButton = document.getElementById('startButton');
@@ -1269,6 +1274,8 @@
             },
             startRecording() {
                 this.recordedChunks = [];
+                this.recordedNotes = [];
+                this.recordingStartTime = audioContext.currentTime;
                 const stream = this.createMediaStreamFromAudioGraph();
                 this.recorder = new MediaRecorder(stream);
                 this.recorder.ondataavailable = (e) => this.recordedChunks.push(e.data);
@@ -1278,6 +1285,13 @@
                 document.getElementById('playButton').disabled = true;
                 document.getElementById('saveButton').disabled = true;
                 document.getElementById('exportWavButton').disabled = true;
+            },
+
+            recordNoteEvent(note, isNoteOn) {
+                if (this.recorder && this.recorder.state === "recording") {
+                    const time = audioContext.currentTime - this.recordingStartTime;
+                    this.recordedNotes.push({ note, time, isNoteOn });
+                }
             },
 
             stopRecording() {
@@ -1291,15 +1305,80 @@
 
             playRecording() {
                 if (this.playbackAudio) {
-                    this.playbackAudio.play();
+                    this.playbackAudio.currentTime = 0;
                 } else if (this.recordedChunks.length > 0) {
                     const blob = new Blob(this.recordedChunks, { type: 'audio/wav' });
                     const audioURL = URL.createObjectURL(blob);
                     this.playbackAudio = new Audio(audioURL);
-                    this.playbackAudio.play();
                 } else {
                     console.log('No recording to play');
+                    return;
                 }
+
+                // Use the main audioContext instead of creating a new one
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                // Create a new source for playback only if it doesn't exist
+                if (!this.playbackSource) {
+                    this.playbackSource = audioContext.createMediaElementSource(this.playbackAudio);
+                    this.playbackSource.connect(compressor);
+                }
+
+                this.playbackAudio.play().then(() => {
+                    this.animatePlayback();
+                    // Use the main updateVisualizer function
+                    UI.updateVisualizer();
+                }).catch(error => {
+                    console.error('Error playing audio:', error);
+                });
+            },
+            
+            stopPlayback() {
+                if (this.playbackAudio) {
+                    this.playbackAudio.pause();
+                    this.playbackAudio.currentTime = 0;
+                }
+                // Clear all active keys
+                document.querySelectorAll('.key.active').forEach(key => key.classList.remove('active'));
+            },
+
+            animatePlayback() {
+                const startTime = audioContext.currentTime;
+                let lastUpdateTime = 0;
+                const updateInterval = 50; // Update every 50ms
+
+                const animate = () => {
+                    if (!this.playbackAudio || this.playbackAudio.paused) {
+                        // Clear all active keys at the end of playback
+                        document.querySelectorAll('.key.active').forEach(key => key.classList.remove('active'));
+                        return;
+                    }
+
+                    const currentTime = audioContext.currentTime - startTime;
+
+                    if (currentTime - lastUpdateTime >= updateInterval / 1000) {
+                        this.recordedNotes.forEach(noteEvent => {
+                            if (Math.abs(noteEvent.time - currentTime) < 0.05) {
+                                const keyElement = document.querySelector(`.key[data-note="${noteEvent.note}"]`);
+                                if (keyElement) {
+                                    if (noteEvent.isNoteOn) {
+                                        keyElement.classList.add('active');
+                                    } else {
+                                        keyElement.classList.remove('active');
+                                    }
+                                }
+                            }
+                        });
+
+                        lastUpdateTime = currentTime;
+                    }
+
+                    requestAnimationFrame(animate);
+                };
+
+                requestAnimationFrame(animate);
             },
 
             saveRecording() {
@@ -1315,7 +1394,8 @@
                     const presets = this.getPresets();
                     const data = {
                         audio: audioData,
-                        presets: presets
+                        presets: presets,
+                        notes: this.recordedNotes
                     };
                     const json = JSON.stringify(data);
                     const jsonBlob = new Blob([json], { type: 'application/json' });
@@ -1343,21 +1423,91 @@
                 reader.readAsDataURL(blob);
             },
             exportWav() {
+                if (!audioContext) {
+                    console.error('AudioContext is not initialized');
+                    return;
+                }
                 if (this.recordedChunks.length === 0) {
                     console.log('No recording to export');
                     return;
                 }
 
                 const blob = new Blob(this.recordedChunks, { type: 'audio/wav' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                document.body.appendChild(a);
-                a.style = 'display: none';
-                a.href = url;
-                a.download = 'browsynth_recording.wav';
-                a.click();
-                window.URL.revokeObjectURL(url);
+
+                blob.arrayBuffer().then(arrayBuffer => {
+                    audioContext.decodeAudioData(arrayBuffer, (audioBuffer) => {
+                        const wav = this.audioBufferToWav(audioBuffer);
+                        const wavBlob = new Blob([new DataView(wav)], { type: 'audio/wav' });
+
+                        const url = URL.createObjectURL(wavBlob);
+                        const a = document.createElement('a');
+                        document.body.appendChild(a);
+                        a.style = 'display: none';
+                        a.href = url;
+                        a.download = 'browsynth_recording.wav';
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    });
+                });
             },
+
+            audioBufferToWav(buffer) {
+                const numChannels = buffer.numberOfChannels;
+                const sampleRate = buffer.sampleRate;
+                const format = 1; // PCM
+                const bitDepth = 16;
+
+                let result = new ArrayBuffer(44 + buffer.length * numChannels * 2);
+                let view = new DataView(result);
+
+                // RIFF identifier
+                this.writeString(view, 0, 'RIFF');
+                // RIFF chunk length
+                view.setUint32(4, 36 + buffer.length * numChannels * 2, true);
+                // RIFF type
+                this.writeString(view, 8, 'WAVE');
+                // format chunk identifier
+                this.writeString(view, 12, 'fmt ');
+                // format chunk length
+                view.setUint32(16, 16, true);
+                // sample format (raw)
+                view.setUint16(20, format, true);
+                // channel count
+                view.setUint16(22, numChannels, true);
+                // sample rate
+                view.setUint32(24, sampleRate, true);
+                // byte rate (sample rate * block align)
+                view.setUint32(28, sampleRate * numChannels * 2, true);
+                // block align (channel count * bytes per sample)
+                view.setUint16(32, numChannels * 2, true);
+                // bits per sample
+                view.setUint16(34, bitDepth, true);
+                // data chunk identifier
+                this.writeString(view, 36, 'data');
+                // data chunk length
+                view.setUint32(40, buffer.length * numChannels * 2, true);
+
+                const length = buffer.length;
+                const channels = buffer.numberOfChannels;
+                let offset = 44;
+                for (let i = 0; i < length; i++) {
+                    for (let channel = 0; channel < channels; channel++) {
+                        let sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+                        sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                        view.setInt16(offset, sample, true);
+                        offset += 2;
+                    }
+                }
+
+                return result;
+            },
+
+            writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            },
+
             loadRecording() {
                 const loadFile = async () => {
                     try {
@@ -1379,6 +1529,7 @@
                         }
                         this.playbackAudio = new Audio(data.audio);
                         this.recordedChunks = []; // Clear any existing recorded chunks
+                        this.recordedNotes = data.notes || [];
                         fetch(data.audio)
                             .then(res => res.blob())
                             .then(blob => {
