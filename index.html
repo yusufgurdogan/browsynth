@@ -290,6 +290,36 @@
                         <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.7">
                     </div>
                 </div>
+                <div class="control">
+                    <label for="masterReverb">Reverb</label>
+                    <div class="circular-control">
+                        <input type="range" id="masterReverb" min="0" max="1" step="0.01" value="0">
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="masterDelay">Delay</label>
+                    <div class="circular-control">
+                        <input type="range" id="masterDelay" min="0" max="1" step="0.01" value="0">
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="masterLowEQ">Low EQ</label>
+                    <div class="circular-control">
+                        <input type="range" id="masterLowEQ" min="-12" max="12" step="0.1" value="0">
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="masterMidEQ">Mid EQ</label>
+                    <div class="circular-control">
+                        <input type="range" id="masterMidEQ" min="-12" max="12" step="0.1" value="0">
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="masterHighEQ">High EQ</label>
+                    <div class="circular-control">
+                        <input type="range" id="masterHighEQ" min="-12" max="12" step="0.1" value="0">
+                    </div>
+                </div>
             </div>
             <div class="control-group">
                 <h2>Oscillator</h2>
@@ -1137,6 +1167,11 @@
                 });
 
                 SynthState.controls.masterVolume.addEventListener('input', () => Synth.updateParams('masterVolume'));
+                SynthState.controls.masterReverb.addEventListener('input', () => Synth.updateParams('masterReverb'));
+                SynthState.controls.masterDelay.addEventListener('input', () => Synth.updateParams('masterDelay'));
+                SynthState.controls.masterLowEQ.addEventListener('input', () => Synth.updateParams('masterLowEQ'));
+                SynthState.controls.masterMidEQ.addEventListener('input', () => Synth.updateParams('masterMidEQ'));
+                SynthState.controls.masterHighEQ.addEventListener('input', () => Synth.updateParams('masterHighEQ'));
                 SynthState.controls.filterToggle.addEventListener('change', () => Synth.updateParams('filterToggle'));
                 SynthState.controls.arpSpeed.addEventListener('input', Arpeggiator.updateSpeed);
                 SynthState.controls.arpClock.addEventListener('change', Arpeggiator.updateSpeed);
@@ -1185,6 +1220,11 @@
             compressor: null,
             playbackAudio: null,
             playbackSource: null,
+            masterReverb: null,
+            masterDelay: null,
+            masterLowEQ: null,
+            masterMidEQ: null,
+            masterHighEQ: null,
 
             initialize() {
                 const startButton = document.getElementById('startButton');
@@ -1215,24 +1255,92 @@
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 masterGainNode = audioContext.createGain();
                 masterGainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
+
+                this.masterReverb = this.createReverbEffect();
+                this.masterDelay = audioContext.createDelay(5.0);
+                this.masterLowEQ = audioContext.createBiquadFilter();
+                this.masterMidEQ = audioContext.createBiquadFilter();
+                this.masterHighEQ = audioContext.createBiquadFilter();
+
                 compressor = audioContext.createDynamicsCompressor();
                 compressor.threshold.setValueAtTime(-24, audioContext.currentTime);
                 compressor.knee.setValueAtTime(30, audioContext.currentTime);
                 compressor.ratio.setValueAtTime(12, audioContext.currentTime);
                 compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
                 compressor.release.setValueAtTime(0.25, audioContext.currentTime);
+
                 analyser = audioContext.createAnalyser();
                 analyser.fftSize = 2048;
 
-                // Connect the nodes in the correct order
-                compressor.connect(masterGainNode);
+                // Create dry/wet gains for reverb and delay
+                this.reverbDry = audioContext.createGain();
+                this.reverbWet = audioContext.createGain();
+                this.delayDry = audioContext.createGain();
+                this.delayWet = audioContext.createGain();
+
+                // Connect the nodes
+                compressor.connect(this.masterLowEQ);
+                this.masterLowEQ.connect(this.masterMidEQ);
+                this.masterMidEQ.connect(this.masterHighEQ);
+                this.masterHighEQ.connect(this.reverbDry);
+                this.masterHighEQ.connect(this.reverbWet);
+                this.reverbWet.connect(this.masterReverb);
+                this.masterReverb.connect(this.delayDry);
+                this.reverbDry.connect(this.delayDry);
+                this.delayDry.connect(this.delayWet);
+                this.delayWet.connect(this.masterDelay);
+                this.masterDelay.connect(masterGainNode);
+                this.delayDry.connect(masterGainNode);
                 masterGainNode.connect(analyser);
                 analyser.connect(audioContext.destination);
+
+                // Set up EQ filters
+                this.masterLowEQ.type = 'lowshelf';
+                this.masterLowEQ.frequency.value = 200;
+                this.masterMidEQ.type = 'peaking';
+                this.masterMidEQ.frequency.value = 1000;
+                this.masterMidEQ.Q.value = 1;
+                this.masterHighEQ.type = 'highshelf';
+                this.masterHighEQ.frequency.value = 3000;
+
+                // Initialize reverb impulse response
+                this.masterReverb.connect(audioContext.destination);
+
+                // Initialize delay
+                this.masterDelay.delayTime.value = 0.5;
+                this.delayWet.gain.value = 0;
+                this.delayDry.gain.value = 1;
+            },
+
+            createReverbEffect() {
+                const reverbNode = audioContext.createConvolver();
+                const attackTime = 0.01;
+                const decayTime = 3;
+                const sampleRate = audioContext.sampleRate;
+                const length = sampleRate * (attackTime + decayTime);
+                const impulse = audioContext.createBuffer(2, length, sampleRate);
+                const impulseL = impulse.getChannelData(0);
+                const impulseR = impulse.getChannelData(1);
+
+                for (let i = 0; i < length; i++) {
+                    const t = i / sampleRate;
+                    const amplitude = t < attackTime ? t / attackTime : Math.exp(-(t - attackTime) / decayTime);
+                    impulseL[i] = (Math.random() * 2 - 1) * amplitude;
+                    impulseR[i] = (Math.random() * 2 - 1) * amplitude;
+                }
+
+                reverbNode.buffer = impulse;
+                return reverbNode;
             },
 
             start() {
                 SynthState.controls = {
                     masterVolume: document.getElementById('masterVolume'),
+                    masterReverb: document.getElementById('masterReverb'),
+                    masterDelay: document.getElementById('masterDelay'),
+                    masterLowEQ: document.getElementById('masterLowEQ'),
+                    masterMidEQ: document.getElementById('masterMidEQ'),
+                    masterHighEQ: document.getElementById('masterHighEQ'),
                     waveform: document.getElementById('waveform'),
                     unison: document.getElementById('unison'),
                     detune: document.getElementById('detune'),
@@ -1262,8 +1370,11 @@
                 SynthState.controls.lfoToggle.checked = SynthState.lfoEnabled;
                 SynthState.controls.noiseToggle.checked = SynthState.noiseEnabled;
 
-                // Set initial master volume
+                // Set initial values for controls
                 this.updateMasterVolume();
+                this.updateMasterReverb();
+                this.updateMasterDelay();
+                this.updateMasterEQ();
 
                 UI.createPiano();
                 UI.initializeEventListeners();
@@ -1271,7 +1382,36 @@
                 this.updateParams();
             },
 
+            updateMasterReverb() {
+                const reverbAmount = parseFloat(SynthState.controls.masterReverb.value);
+                this.reverbWet.gain.setTargetAtTime(reverbAmount, audioContext.currentTime, 0.01);
+                this.reverbDry.gain.setTargetAtTime(1 - reverbAmount, audioContext.currentTime, 0.01);
+            },
+
+            updateMasterDelay() {
+                const delayAmount = parseFloat(SynthState.controls.masterDelay.value);
+                this.delayWet.gain.setTargetAtTime(delayAmount, audioContext.currentTime, 0.01);
+                this.delayDry.gain.setTargetAtTime(1 - delayAmount, audioContext.currentTime, 0.01);
+            },
+
+            updateMasterEQ() {
+                const lowGain = parseFloat(SynthState.controls.masterLowEQ.value);
+                const midGain = parseFloat(SynthState.controls.masterMidEQ.value);
+                const highGain = parseFloat(SynthState.controls.masterHighEQ.value);
+
+                this.masterLowEQ.gain.setTargetAtTime(lowGain, audioContext.currentTime, 0.01);
+                this.masterMidEQ.gain.setTargetAtTime(midGain, audioContext.currentTime, 0.01);
+                this.masterHighEQ.gain.setTargetAtTime(highGain, audioContext.currentTime, 0.01);
+            },
+
             updateParams(changedParam) {
+                if (changedParam === 'masterReverb') {
+                    this.updateMasterReverb();
+                } else if (changedParam === 'masterDelay') {
+                    this.updateMasterDelay();
+                } else if (changedParam === 'masterLowEQ' || changedParam === 'masterMidEQ' || changedParam === 'masterHighEQ') {
+                    this.updateMasterEQ();
+                }
                 if (changedParam === 'masterVolume') {
                     this.updateMasterVolume();
                 }
