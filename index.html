@@ -283,6 +283,15 @@
         </div>
         <div id="controls">
             <div class="control-group">
+                <h2>Master</h2>
+                <div class="control">
+                    <label for="masterVolume">Volume</label>
+                    <div class="circular-control">
+                        <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.7">
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
                 <h2>Oscillator</h2>
                 <div class="control">
                     <label for="waveform">Waveform</label>
@@ -1127,6 +1136,7 @@
                     }
                 });
 
+                SynthState.controls.masterVolume.addEventListener('input', () => Synth.updateParams('masterVolume'));
                 SynthState.controls.filterToggle.addEventListener('change', () => Synth.updateParams('filterToggle'));
                 SynthState.controls.arpSpeed.addEventListener('input', Arpeggiator.updateSpeed);
                 SynthState.controls.arpClock.addEventListener('change', Arpeggiator.updateSpeed);
@@ -1211,15 +1221,18 @@
                 compressor.ratio.setValueAtTime(12, audioContext.currentTime);
                 compressor.attack.setValueAtTime(0.003, audioContext.currentTime);
                 compressor.release.setValueAtTime(0.25, audioContext.currentTime);
-                masterGainNode.connect(compressor);
                 analyser = audioContext.createAnalyser();
                 analyser.fftSize = 2048;
-                compressor.connect(analyser);
+
+                // Connect the nodes in the correct order
+                compressor.connect(masterGainNode);
+                masterGainNode.connect(analyser);
                 analyser.connect(audioContext.destination);
             },
 
             start() {
                 SynthState.controls = {
+                    masterVolume: document.getElementById('masterVolume'),
                     waveform: document.getElementById('waveform'),
                     unison: document.getElementById('unison'),
                     detune: document.getElementById('detune'),
@@ -1249,6 +1262,9 @@
                 SynthState.controls.lfoToggle.checked = SynthState.lfoEnabled;
                 SynthState.controls.noiseToggle.checked = SynthState.noiseEnabled;
 
+                // Set initial master volume
+                this.updateMasterVolume();
+
                 UI.createPiano();
                 UI.initializeEventListeners();
                 UI.updateVisualizer();
@@ -1256,6 +1272,9 @@
             },
 
             updateParams(changedParam) {
+                if (changedParam === 'masterVolume') {
+                    this.updateMasterVolume();
+                }
                 if (changedParam === 'unison' || changedParam === 'detune' || changedParam === 'waveform') {
                     Object.values(SynthState.activeVoices).forEach(voice => {
                         voice.updateVoice();
@@ -1283,9 +1302,17 @@
 
             createMediaStreamFromAudioGraph() {
                 const dest = audioContext.createMediaStreamDestination();
-                compressor.connect(dest);
+                analyser.connect(dest);
                 return dest.stream;
             },
+
+            updateMasterVolume() {
+                const volume = parseFloat(SynthState.controls.masterVolume.value);
+                if (masterGainNode) {
+                    masterGainNode.gain.setTargetAtTime(volume, audioContext.currentTime, 0.01);
+                }
+            },
+
             startRecording() {
                 this.recordedChunks = [];
                 this.recordedNotes = [];
@@ -1316,7 +1343,6 @@
                 document.getElementById('saveButton').disabled = false;
                 document.getElementById('exportWavButton').disabled = false;
             },
-
             playRecording() {
                 if (this.playbackAudio) {
                     this.playbackAudio.currentTime = 0;
@@ -1348,7 +1374,6 @@
                     console.error('Error playing audio:', error);
                 });
             },
-
             stopPlayback() {
                 if (this.playbackAudio) {
                     this.playbackAudio.pause();
@@ -1357,7 +1382,6 @@
                 // Clear all active keys
                 document.querySelectorAll('.key.active').forEach(key => key.classList.remove('active'));
             },
-
             animatePlayback() {
                 const startTime = audioContext.currentTime;
                 let lastUpdateTime = 0;
@@ -1394,7 +1418,6 @@
 
                 requestAnimationFrame(animate);
             },
-
             saveRecording() {
                 if (this.recordedChunks.length === 0) {
                     console.log('No recording to save');
