@@ -1257,7 +1257,9 @@
                 masterGainNode.gain.setValueAtTime(0.7, audioContext.currentTime);
 
                 this.masterReverb = this.createReverbEffect();
-                this.masterDelay = audioContext.createDelay(5.0);
+                const delayEffect = this.createDelayEffect();
+                this.masterDelay = delayEffect.delayNode;
+                this.delayFeedback = delayEffect.feedbackGain;
                 this.masterLowEQ = audioContext.createBiquadFilter();
                 this.masterMidEQ = audioContext.createBiquadFilter();
                 this.masterHighEQ = audioContext.createBiquadFilter();
@@ -1289,6 +1291,8 @@
                 this.reverbDry.connect(this.delayDry);
                 this.delayDry.connect(this.delayWet);
                 this.delayWet.connect(this.masterDelay);
+                this.masterDelay.connect(this.delayFeedback);
+                this.delayFeedback.connect(this.masterDelay);
                 this.masterDelay.connect(masterGainNode);
                 this.delayDry.connect(masterGainNode);
                 masterGainNode.connect(analyser);
@@ -1303,34 +1307,45 @@
                 this.masterHighEQ.type = 'highshelf';
                 this.masterHighEQ.frequency.value = 3000;
 
-                // Initialize reverb impulse response
-                this.masterReverb.connect(audioContext.destination);
-
                 // Initialize delay
                 this.masterDelay.delayTime.value = 0.5;
                 this.delayWet.gain.value = 0;
                 this.delayDry.gain.value = 1;
+
+                // Initialize reverb
+                this.reverbWet.gain.value = 0;
+                this.reverbDry.gain.value = 1;
             },
 
             createReverbEffect() {
                 const reverbNode = audioContext.createConvolver();
-                const attackTime = 0.01;
-                const decayTime = 3;
-                const sampleRate = audioContext.sampleRate;
-                const length = sampleRate * (attackTime + decayTime);
-                const impulse = audioContext.createBuffer(2, length, sampleRate);
+                const length = audioContext.sampleRate * 4; // 4 seconds
+                const impulse = audioContext.createBuffer(2, length, audioContext.sampleRate);
                 const impulseL = impulse.getChannelData(0);
                 const impulseR = impulse.getChannelData(1);
 
                 for (let i = 0; i < length; i++) {
-                    const t = i / sampleRate;
-                    const amplitude = t < attackTime ? t / attackTime : Math.exp(-(t - attackTime) / decayTime);
-                    impulseL[i] = (Math.random() * 2 - 1) * amplitude;
-                    impulseR[i] = (Math.random() * 2 - 1) * amplitude;
+                    const t = i / audioContext.sampleRate;
+                    const decay = Math.exp(-t * 3); // Adjust decay rate
+                    impulseL[i] = (Math.random() * 2 - 1) * decay;
+                    impulseR[i] = (Math.random() * 2 - 1) * decay;
                 }
 
                 reverbNode.buffer = impulse;
                 return reverbNode;
+            },
+
+            createDelayEffect() {
+                const delayNode = audioContext.createDelay(5.0);
+                const feedbackGain = audioContext.createGain();
+
+                delayNode.delayTime.value = 0.5; // 500ms delay
+                feedbackGain.gain.value = 0.3; // 30% feedback
+
+                delayNode.connect(feedbackGain);
+                feedbackGain.connect(delayNode);
+
+                return { delayNode, feedbackGain };
             },
 
             start() {
@@ -1384,14 +1399,31 @@
 
             updateMasterReverb() {
                 const reverbAmount = parseFloat(SynthState.controls.masterReverb.value);
-                this.reverbWet.gain.setTargetAtTime(reverbAmount, audioContext.currentTime, 0.01);
-                this.reverbDry.gain.setTargetAtTime(1 - reverbAmount, audioContext.currentTime, 0.01);
-            },
 
+                // Constant-power crossfade
+                const dryAmount = Math.cos(reverbAmount * 0.5 * Math.PI);
+                const wetAmount = Math.sin(reverbAmount * 0.5 * Math.PI);
+
+                this.reverbWet.gain.setTargetAtTime(wetAmount, audioContext.currentTime, 0.01);
+                this.reverbDry.gain.setTargetAtTime(dryAmount, audioContext.currentTime, 0.01);
+            },
             updateMasterDelay() {
                 const delayAmount = parseFloat(SynthState.controls.masterDelay.value);
-                this.delayWet.gain.setTargetAtTime(delayAmount, audioContext.currentTime, 0.01);
-                this.delayDry.gain.setTargetAtTime(1 - delayAmount, audioContext.currentTime, 0.01);
+
+                // Constant-power crossfade
+                const dryAmount = Math.cos(delayAmount * 0.5 * Math.PI);
+                const wetAmount = Math.sin(delayAmount * 0.5 * Math.PI);
+
+                this.delayWet.gain.setTargetAtTime(wetAmount, audioContext.currentTime, 0.01);
+                this.delayDry.gain.setTargetAtTime(dryAmount, audioContext.currentTime, 0.01);
+
+                // Adjust delay time based on the control value (0.1 to 1 second)
+                const delayTime = 0.1 + (delayAmount * 0.9);
+                this.masterDelay.delayTime.setTargetAtTime(delayTime, audioContext.currentTime, 0.01);
+
+                // Adjust feedback based on the control value (0 to 70%)
+                const feedback = delayAmount * 0.7;
+                this.delayFeedback.gain.setTargetAtTime(feedback, audioContext.currentTime, 0.01);
             },
 
             updateMasterEQ() {
