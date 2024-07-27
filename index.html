@@ -1713,7 +1713,7 @@
 
                 blob.arrayBuffer().then(arrayBuffer => {
                     this.audioContext.decodeAudioData(arrayBuffer, (audioBuffer) => {
-                        const offlineCtx = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.duration * 22050, 22050);
+                        const offlineCtx = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.length, 44100);
                         const source = offlineCtx.createBufferSource();
                         source.buffer = audioBuffer;
                         source.connect(offlineCtx.destination);
@@ -1744,36 +1744,37 @@
 
             audioBufferToWav(buffer) {
                 const numChannels = buffer.numberOfChannels;
-                const sampleRate = 22050;
-                const format = 1;
-                const bitDepth = 16;
+                const sampleRate = 44100;
+                const format = 1; // PCM
+                const bitDepth = 24;
 
-                let result = new ArrayBuffer(44 + buffer.length * numChannels * 2);
+                let result = new ArrayBuffer(44 + buffer.length * numChannels * 3);
                 let view = new DataView(result);
 
+                // Write WAV header
                 this.writeString(view, 0, 'RIFF');
-                view.setUint32(4, 36 + buffer.length * numChannels * 2, true);
+                view.setUint32(4, 36 + buffer.length * numChannels * 3, true);
                 this.writeString(view, 8, 'WAVE');
                 this.writeString(view, 12, 'fmt ');
                 view.setUint32(16, 16, true);
                 view.setUint16(20, format, true);
                 view.setUint16(22, numChannels, true);
                 view.setUint32(24, sampleRate, true);
-                view.setUint32(28, sampleRate * numChannels * 2, true);
-                view.setUint16(32, numChannels * 2, true);
+                view.setUint32(28, sampleRate * numChannels * 3, true);
+                view.setUint16(32, numChannels * 3, true);
                 view.setUint16(34, bitDepth, true);
                 this.writeString(view, 36, 'data');
-                view.setUint32(40, buffer.length * numChannels * 2, true);
+                view.setUint32(40, buffer.length * numChannels * 3, true);
 
+                // Write audio data
                 const length = buffer.length;
-                const channels = buffer.numberOfChannels;
                 let offset = 44;
                 for (let i = 0; i < length; i++) {
-                    for (let channel = 0; channel < channels; channel++) {
+                    for (let channel = 0; channel < numChannels; channel++) {
                         let sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-                        sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
-                        view.setInt16(offset, sample, true);
-                        offset += 2;
+                        sample = sample < 0 ? sample * 0x7FFFFF : sample * 0x7FFFFF;
+                        view.setInt24(offset, sample, true);
+                        offset += 3;
                     }
                 }
 
@@ -1785,6 +1786,12 @@
                     view.setUint8(offset + i, string.charCodeAt(i));
                 }
             },
+        };
+
+        DataView.prototype.setInt24 = function (pos, val, littleEndian) {
+            this.setUint8(pos + (littleEndian ? 0 : 2), val & 0xFF);
+            this.setUint8(pos + 1, (val >> 8) & 0xFF);
+            this.setUint8(pos + (littleEndian ? 2 : 0), (val >> 16) & 0xFF);
         };
 
         // Initialize the synth when the DOM is fully loaded
