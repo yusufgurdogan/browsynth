@@ -1,7 +1,6 @@
 # TODO
 - fix: ARP types
 - add: white-keys-only mode (using all 12345..., qwert..., asdfg..., zxcvb... keys for white keys)
-- add: numpad keys
 - add: scale shift -1, 0, 1
 - add: mobile&tablet compability!
 - hertz selector (440, 432 etc.)

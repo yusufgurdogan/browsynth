@@ -288,26 +288,41 @@
             whiteNotes: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
             blackNotes: ['C#', 'D#', 'F#', 'G#', 'A#'],
             keyboardMap: {
-                // White keys
+                // Existing mappings
                 'z': 'C3', 'x': 'D3', 'c': 'E3', 'v': 'F3', 'b': 'G3', 'n': 'A3', 'm': 'B3',
                 'q': 'C4', 'w': 'D4', 'e': 'E4', 'r': 'F4', 't': 'G4', 'y': 'A4', 'u': 'B4',
                 'i': 'C5', 'o': 'D5', 'p': 'E5', '[': 'F5', ']': 'G5',
-
-                // Black keys
-                's': 'C#3', 'd': 'D#3',
-                'g': 'F#3', 'h': 'G#3', 'j': 'A#3',
-                '2': 'C#4', '3': 'D#4',
-                '5': 'F#4', '6': 'G#4', '7': 'A#4',
-                '9': 'C#5', '0': 'D#5',
-                '=': 'F#5',
-
-                // Additional keys for easier playing
+                's': 'C#3', 'd': 'D#3', 'g': 'F#3', 'h': 'G#3', 'j': 'A#3',
+                '2': 'C#4', '3': 'D#4', '5': 'F#4', '6': 'G#4', '7': 'A#4',
+                '9': 'C#5', '0': 'D#5', '=': 'F#5',
                 ',': 'C4', '.': 'D4', '/': 'E4',
                 'a': 'A3', 'k': 'B3', 'l': 'C4', ';': 'D4', "'": 'E4',
-
-                // Keep Turkish keyboard support
                 'ı': 'C5', 'ğ': 'F5', 'ü': 'G5',
-                'ö': 'C4', 'ç': 'D4'
+                'ö': 'C4', 'ç': 'D4',
+
+                // Updated numpad mappings
+                'numpad0': 'G3', 'numpadinsert': 'G3',
+                'numpaddelete': 'A3', 'numpad,': 'A3',
+                'numpadenter': 'B3',
+                'numpad1': 'C4', 'numpadend': 'C4',
+                'numpad2': 'D4', 'numpadarrowdown': 'D4',
+                'numpad3': 'E4', 'numpadpagedown': 'E4',
+                'numpad4': 'F4', 'numpadarrowleft': 'F4',
+                'numpad5': 'G4', 'numpadclear': 'G4',
+                'numpad6': 'A4', 'numpadarrowright': 'A4',
+                'numpad7': 'B4', 'numpadhome': 'B4',
+                'numpad8': 'C5', 'numpadarrowup': 'C5',
+                'numpad9': 'D5', 'numpadpageup': 'D5',
+                'numpad+': 'E5',
+                'numpad': 'F5',
+                'numpad/': 'G5',
+                'numpad*': 'A5', 'numpad-': 'A4',
+
+                // Arrow keys
+                'arrowup': 'F3',
+                'arrowright': 'E3',
+                'arrowdown': 'D3',
+                'arrowleft': 'C3'
             },
             maxPolyphony: 8,
         };
@@ -968,19 +983,53 @@
                 });
                 // Keyboard controls
                 document.addEventListener('keydown', (event) => {
-                    const note = SynthConfig.keyboardMap[event.key.toLowerCase()];
+                    let key = event.key.toLowerCase();
+                    let originalKey = key;
+                    let location = event.location;
+                    // Handle numpad keys
+                    if (location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD) {
+                        if (key === '.') {
+                            key = 'numpad.';
+                        } else if (key === 'enter') {
+                            key = 'numpadenter';
+                        } else {
+                            key = 'numpad' + key;
+                        }
+                    } else if (key === 'numlock') {
+                        key = 'numpad';
+                    }
+
+                    const note = SynthConfig.keyboardMap[key];
                     if (note && !event.repeat) {
                         Voice.play(note);
+                        event.preventDefault();
                     }
                 });
 
                 document.addEventListener('keyup', (event) => {
-                    const note = SynthConfig.keyboardMap[event.key.toLowerCase()];
+                    let key = event.key.toLowerCase();
+                    let originalKey = key;
+                    let location = event.location;
+
+                    // Handle numpad keys
+                    if (location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD) {
+                        if (key === '.') {
+                            key = 'numpad.';
+                        } else if (key === 'enter') {
+                            key = 'numpadenter';
+                        } else {
+                            key = 'numpad' + key;
+                        }
+                    } else if (key === 'numlock') {
+                        key = 'numpad';
+                    }
+
+                    const note = SynthConfig.keyboardMap[key];
                     if (note) {
                         Voice.release(note);
+                        event.preventDefault();
                     }
                 });
-
                 window.addEventListener('blur', () => Voice.stopAllNotes());
                 window.addEventListener('resize', this.updateVisualizer);
 
