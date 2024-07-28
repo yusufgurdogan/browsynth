@@ -134,14 +134,14 @@
                     </div>
                 </div>
                 <div class="control">
+                    <label for="fmToggle">FM On/Off</label>
+                    <input type="checkbox" id="fmToggle">
+                </div>
+                <div class="control">
                     <label for="fmAmount">FM Amount</label>
                     <div class="circular-control">
                         <input type="range" id="fmAmount" min="0" max="1000" step="1" value="0">
                     </div>
-                </div>
-                <div class="control">
-                    <label for="fmToggle">FM On/Off</label>
-                    <input type="checkbox" id="fmToggle">
                 </div>
             </div>
             <div class="control-group">
@@ -270,6 +270,13 @@
                     </div>
                 </div>
             </div>
+            <div class="control-group">
+                <h2>Miscellaneous</h2>
+                <div class="control">
+                    <label for="whiteKeysOnlyToggle">White Keys Only</label>
+                    <input type="checkbox" id="whiteKeysOnlyToggle">
+                </div>
+            </div>
         </div>
         <p id="footer">we like <a href="https://hypertrance.eu/" target="_blank"
                 rel="noopener noreferrer">hypertrance</a> ❤️</p>
@@ -300,7 +307,6 @@
                 'ı': 'C5', 'ğ': 'F5', 'ü': 'G5',
                 'ö': 'C4', 'ç': 'D4',
 
-                // Updated numpad mappings
                 'numpad0': 'G3', 'numpadinsert': 'G3',
                 'numpaddelete': 'A3', 'numpad,': 'A3',
                 'numpadenter': 'B3',
@@ -318,7 +324,34 @@
                 'numpad/': 'G5',
                 'numpad*': 'A5', 'numpad-': 'A4',
 
-                // Arrow keys
+                'arrowup': 'F3',
+                'arrowright': 'E3',
+                'arrowdown': 'D3',
+                'arrowleft': 'C3'
+            },
+            whiteKeysOnlyMap: {
+                'z': 'C3', 'x': 'D3', 'c': 'E3', 'v': 'F3', 'b': 'G3', 'n': 'A3', 'm': 'B3', ',': 'C4', 'ö': 'C4', '.': 'D4', 'ç': 'D4', '/': 'E4',
+                'a': 'C4', 's': 'D4', 'd': 'E4', 'f': 'F4', 'g': 'G4', 'h': 'A4', 'j': 'B4', 'k': 'C5', 'l': 'D5', ';': 'E5', 'ş': 'E5', "'": 'F5', 'i': 'F5',
+                'q': 'C5', 'w': 'D5', 'e': 'E5', 'r': 'F5', 't': 'G5', 'y': 'A5', 'u': 'B5', 'ı': 'C6', 'o': 'D6', 'p': 'E6', '[': 'F6', 'ğ': 'F6', ']': 'G6', 'ü': 'G6',
+                '1': 'C6', '2': 'D6', '3': 'E6', '4': 'F6', '5': 'G6', '6': 'A6', '7': 'B6', '8': 'C7', '9': 'D7', '0': 'E7', '-': 'F7', '*': 'F7', '=': 'G7', '-': 'G7',
+
+                'numpad0': 'G3', 'numpadinsert': 'G3',
+                'numpaddelete': 'A3', 'numpad,': 'A3',
+                'numpadenter': 'B3',
+                'numpad1': 'C4', 'numpadend': 'C4',
+                'numpad2': 'D4', 'numpadarrowdown': 'D4',
+                'numpad3': 'E4', 'numpadpagedown': 'E4',
+                'numpad4': 'F4', 'numpadarrowleft': 'F4',
+                'numpad5': 'G4', 'numpadclear': 'G4',
+                'numpad6': 'A4', 'numpadarrowright': 'A4',
+                'numpad7': 'B4', 'numpadhome': 'B4',
+                'numpad8': 'C5', 'numpadarrowup': 'C5',
+                'numpad9': 'D5', 'numpadpageup': 'D5',
+                'numpad+': 'E5',
+                'numpad': 'F5',
+                'numpad/': 'G5',
+                'numpad*': 'A5', 'numpad-': 'A4',
+
                 'arrowup': 'F3',
                 'arrowright': 'E3',
                 'arrowdown': 'D3',
@@ -335,6 +368,7 @@
             fmEnabled: false,
             lfoEnabled: false,
             noiseEnabled: false,
+            whiteKeysOnly: false,
             arpeggiator: {
                 isOn: false,
                 pattern: 'up',
@@ -981,11 +1015,19 @@
                     e.target.value = 0;
                     Synth.updatePitchBend(0);
                 });
+
+                // Add event listener for the new toggle
+                SynthState.controls.whiteKeysOnlyToggle = document.getElementById('whiteKeysOnlyToggle');
+                SynthState.controls.whiteKeysOnlyToggle.addEventListener('change', (e) => {
+                    SynthState.whiteKeysOnly = e.target.checked;
+                });
+
                 // Keyboard controls
                 document.addEventListener('keydown', (event) => {
                     let key = event.key.toLowerCase();
                     let originalKey = key;
                     let location = event.location;
+
                     // Handle numpad keys
                     if (location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD) {
                         if (key === '.') {
@@ -999,7 +1041,8 @@
                         key = 'numpad';
                     }
 
-                    const note = SynthConfig.keyboardMap[key];
+                    const keyboardMap = SynthState.whiteKeysOnly ? SynthConfig.whiteKeysOnlyMap : SynthConfig.keyboardMap;
+                    const note = keyboardMap[key];
                     if (note && !event.repeat) {
                         Voice.play(note);
                         event.preventDefault();
@@ -1024,7 +1067,8 @@
                         key = 'numpad';
                     }
 
-                    const note = SynthConfig.keyboardMap[key];
+                    const keyboardMap = SynthState.whiteKeysOnly ? SynthConfig.whiteKeysOnlyMap : SynthConfig.keyboardMap;
+                    const note = keyboardMap[key];
                     if (note) {
                         Voice.release(note);
                         event.preventDefault();
@@ -1096,6 +1140,7 @@
 
             start() {
                 SynthState.controls = {
+                    whiteKeysOnlyToggle: document.getElementById('whiteKeysOnlyToggle'),
                     masterVolume: document.getElementById('masterVolume'),
                     masterReverb: document.getElementById('masterReverb'),
                     masterDelay: document.getElementById('masterDelay'),
