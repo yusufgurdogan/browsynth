@@ -276,6 +276,19 @@
                     <input type="checkbox" id="whiteKeysOnlyToggle">
                 </div>
             </div>
+            <div class="control-group">
+                <h2>Tuning</h2>
+                <div class="control">
+                    <label for="tuningFile">Import .tun file</label>
+                    <input type="file" id="tuningFile" accept=".tun">
+                </div>
+                <div class="control">
+                    <div class="tuning-buttons">
+                        <button id="applyTuning" class="control-button" disabled>Apply Tuning</button>
+                        <button id="resetTuning" class="control-button">Reset Tuning</button>
+                    </div>
+                </div>
+            </div>
         </div>
         <p id="footer">we like <a href="https://hypertrance.eu/" target="_blank"
                 rel="noopener noreferrer">hypertrance</a> ❤️</p>
@@ -285,6 +298,8 @@
         let masterGainNode;
         let compressor;
         let analyser;
+        let loadedTuningContent = null;
+        let loadedFileName = null;
 
         // Synth configuration object
         const SynthConfig = {
@@ -358,7 +373,118 @@
             },
             maxPolyphony: 8,
         };
+        // New Tuning System
+        const TuningSystem = {
+            frequencies: new Array(128).fill(null),
+            isCustomTuning: false,
+            // Update the parseTunFile method in TuningSystem
+            // Update the parseTunFile method in TuningSystem
+            parseTunFile(content) {
+                console.log('Parsing tuning file...');
+                const lines = content.split('\n');
+                const frequencies = new Array(128).fill(null);
+                let inExactSection = false;
 
+                // Reference C4 = 261.63 Hz (MIDI note 60)
+                const MIDDLE_C = 261.63;
+                const OCTAVE_RATIO = 2;
+                const STEPS_PER_OCTAVE = 17;  // Your scale has 17 tones per octave
+                const STEP_RATIO = Math.pow(OCTAVE_RATIO, 1 / STEPS_PER_OCTAVE);
+
+                // Find the base frequency (C4) in the tuning file
+                const c4Index = 60;  // MIDI note number for C4
+                const c4FreqInFile = 6000;  // The frequency for C4 in your tuning file
+
+                lines.forEach((line, index) => {
+                    line = line.trim();
+
+                    if (line === '[Exact Tuning]') {
+                        console.log('Found Exact Tuning section at line', index);
+                        inExactSection = true;
+                        return;
+                    }
+
+                    if (line.startsWith('note ')) {
+                        const parts = line.split('=');
+                        if (parts.length !== 2) return;
+
+                        const noteNumber = parseInt(parts[0].replace('note ', ''));
+                        let value = parseFloat(parts[1].trim());
+
+                        if (!isNaN(noteNumber) && !isNaN(value) && noteNumber >= 0 && noteNumber < 128) {
+                            // Calculate steps from C4
+                            const stepsFromC4 = noteNumber - c4Index;
+
+                            // Calculate the frequency relative to C4
+                            const scaledFreq = MIDDLE_C * Math.pow(STEP_RATIO, stepsFromC4);
+
+                            frequencies[noteNumber] = scaledFreq;
+                            console.log(`Setting note ${noteNumber} to ${scaledFreq}Hz (scaled from ${value}Hz)`);
+                        }
+                    }
+                });
+
+                // Validate the parsed data
+                const validCount = frequencies.filter(f => f !== null).length;
+                console.log(`Successfully parsed ${validCount} frequencies`);
+
+                if (validCount === 0) {
+                    console.error('No valid frequencies found in file!');
+                    return null;
+                }
+
+                return frequencies;
+            },
+            importTuning(frequencies) {
+                if (!frequencies || frequencies.every(f => f === null)) {
+                    console.error('Invalid frequencies provided to import');
+                    return;
+                }
+
+                console.log('Importing new tuning...');
+                this.frequencies = frequencies;
+                this.isCustomTuning = true;
+
+                // Validate the import
+                const validCount = this.frequencies.filter(f => f !== null).length;
+                console.log(`Imported ${validCount} frequencies`);
+                console.log('Custom tuning is now:', this.isCustomTuning);
+                console.log('Sample of active frequencies:', this.frequencies.slice(60, 72));
+            },
+            resetToDefaultTuning() {
+                console.log('Resetting to default tuning');
+                this.frequencies = new Array(128).fill(null);
+                this.isCustomTuning = false;
+            },
+
+            noteToFreq: function (note) { // Use function keyword to maintain correct 'this' binding
+                if (!note) return 0;
+
+                const matches = note.match(/([A-G]#?)(\d+)/);
+                if (!matches) {
+                    console.error('Invalid note format:', note);
+                    return 0;
+                }
+
+                const [_, noteName, octaveStr] = matches;
+                const octave = parseInt(octaveStr);
+                const noteIndex = SynthConfig.notes.indexOf(noteName);
+                const midiNote = noteIndex + (octave + 1) * 12;
+
+                console.log('Note:', note, 'MIDI:', midiNote, 'Custom Tuning:', this.isCustomTuning,
+                    'Has Custom Frequency:', this.frequencies[midiNote] !== null);
+
+                if (this.isCustomTuning && this.frequencies[midiNote] !== null) {
+                    const customFreq = this.frequencies[midiNote];
+                    console.log(`Using custom frequency for ${note} (MIDI ${midiNote}): ${customFreq}Hz`);
+                    return customFreq;
+                }
+
+                const defaultFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
+                console.log(`Using default frequency for ${note} (MIDI ${midiNote}): ${defaultFreq}Hz`);
+                return defaultFreq;
+            }
+        };
         // Synth state
         const SynthState = {
             activeVoices: {},
@@ -387,23 +513,9 @@
         // Utility functions
         const Util = {
             noteToFreq(note) {
-                if (!note) {
-                    console.error('Invalid note:', note);
-                    return 0;
-                }
-
-                let [noteName, octave] = note.match(/([A-G]#?)(\d+)/).slice(1);
-                octave = parseInt(octave);
-
-                const noteIndex = SynthConfig.notes.indexOf(noteName);
-                if (noteIndex === -1) {
-                    console.error('Invalid note name:', noteName);
-                    return 0;
-                }
-
-                return 440 * Math.pow(2, (noteIndex - 9) / 12 + (octave - 4));
+                // Call noteToFreq directly on TuningSystem instead of using bind
+                return TuningSystem.noteToFreq(note);
             },
-
             createNoiseBuffer() {
                 if (!audioContext) return null;
                 const bufferSize = audioContext.sampleRate;
@@ -420,7 +532,7 @@
         const Voice = {
             create(note) {
                 if (!Synth.audioContext) return null;
-                const frequency = Util.noteToFreq(note);
+                const frequency = TuningSystem.noteToFreq(note); // Call directly on TuningSystem
                 const now = Synth.audioContext.currentTime;
 
                 const oscillators = [];
@@ -1109,6 +1221,40 @@
                 const exportWavButton = document.getElementById('exportWavButton');
                 exportWavButton.addEventListener('click', () => this.exportWav());
 
+                // Initialize tuning controls early
+                const applyTuningButton = document.getElementById('applyTuning');
+                const resetTuningButton = document.getElementById('resetTuning');
+                const tuningFileInput = document.getElementById('tuningFile');
+
+                // Make sure the apply button starts disabled
+                if (applyTuningButton) {
+                    applyTuningButton.disabled = true;
+                }
+
+                // Set up tuning file input handler
+                if (tuningFileInput) {
+                    tuningFileInput.addEventListener('change', (event) => {
+                        const file = event.target.files[0];
+                        if (!file) {
+                            console.log('No file selected');
+                            applyTuningButton.disabled = true;
+                            return;
+                        }
+
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            loadedTuningContent = e.target.result;
+                            console.log('Tuning file loaded:', loadedTuningContent.substring(0, 100) + '...');
+                            applyTuningButton.disabled = false;
+                        };
+                        reader.onerror = (error) => {
+                            console.error('Error reading file:', error);
+                            applyTuningButton.disabled = true;
+                        };
+                        reader.readAsText(file);
+                    });
+                }
+
                 startButton.addEventListener('click', () => {
                     this.initAudioContext();
                     startModal.style.display = 'none';
@@ -1130,14 +1276,11 @@
                 // Initialize pitch bend controls
                 SynthState.controls.pitchBendWheel = document.getElementById('pitchBendWheel');
                 SynthState.controls.pitchBendRange = document.getElementById('pitchBendRange');
-
-                // Ensure pitchBendRange is not null before proceeding
-                if (SynthState.controls.pitchBendRange === null) {
-                    console.error('pitchBendRange element not found');
-                }
             },
-
             start() {
+                console.log('Synth start initiated...');
+
+                // Initialize all controls
                 SynthState.controls = {
                     whiteKeysOnlyToggle: document.getElementById('whiteKeysOnlyToggle'),
                     masterVolume: document.getElementById('masterVolume'),
@@ -1171,13 +1314,112 @@
                     noiseToggle: document.getElementById('noiseToggle'),
                     pitchBendWheel: document.getElementById('pitchBendWheel'),
                     pitchBendRange: document.getElementById('pitchBendRange'),
+                    tuningFile: document.getElementById('tuningFile'),
+                    applyTuning: document.getElementById('applyTuning'),
+                    resetTuning: document.getElementById('resetTuning')
                 };
 
+                // Set initial states
                 SynthState.controls.fmToggle.checked = SynthState.fmEnabled;
                 SynthState.controls.lfoToggle.checked = SynthState.lfoEnabled;
                 SynthState.controls.noiseToggle.checked = SynthState.noiseEnabled;
+                SynthState.controls.applyTuning.disabled = true;
 
-                // Ensure pitchBendRange is not null before using its value
+                console.log('Setting up tuning controls...');
+
+                // Setup tuning file handler
+                SynthState.controls.tuningFile.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (!file) {
+                        console.log('No file selected');
+                        SynthState.controls.applyTuning.disabled = true;
+                        return;
+                    }
+
+                    console.log('File selected:', file.name);
+                    loadedFileName = file.name;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        loadedTuningContent = e.target.result;
+                        console.log('Tuning file loaded:', loadedTuningContent.substring(0, 100) + '...');
+                        SynthState.controls.applyTuning.disabled = false;
+                    };
+                    reader.onerror = (e) => {
+                        console.error('Error reading file:', e);
+                        SynthState.controls.applyTuning.disabled = true;
+                    };
+                    reader.readAsText(file);
+                });
+
+                // Setup apply tuning handler
+                SynthState.controls.applyTuning.addEventListener('click', () => {
+                    console.log('Apply button clicked!');
+
+                    if (!loadedTuningContent) {
+                        console.error('No tuning content to apply');
+                        return;
+                    }
+
+                    console.log('Processing tuning file...');
+
+                    // Parse and apply the tuning
+                    const frequencies = TuningSystem.parseTunFile(loadedTuningContent);
+                    if (!frequencies) {
+                        console.error('Failed to parse frequencies from file');
+                        return;
+                    }
+
+                    console.log('Parsed frequencies preview:', frequencies.slice(60, 72));
+
+                    // Import the tuning
+                    TuningSystem.importTuning(frequencies);
+
+                    console.log('Tuning system state after import:');
+                    console.log('- isCustomTuning:', TuningSystem.isCustomTuning);
+                    console.log('- Has frequencies:', TuningSystem.frequencies.some(f => f !== null));
+
+                    // Update all active voices
+                    Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
+                        const frequency = TuningSystem.noteToFreq(note);
+                        console.log(`Updating voice ${note} to ${frequency}Hz`);
+                        const now = Synth.audioContext.currentTime;
+
+                        voice.oscillators.forEach(osc => {
+                            osc.frequency.setValueAtTime(frequency, now);
+                        });
+
+                        if (voice.fmOsc) {
+                            voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
+                        }
+                    });
+
+                    console.log('Tuning update complete!');
+                });
+
+                // Setup reset tuning handler
+                SynthState.controls.resetTuning.addEventListener('click', () => {
+                    console.log('Resetting to default tuning');
+                    TuningSystem.resetToDefaultTuning();
+                    loadedTuningContent = null;
+                    loadedFileName = null;
+                    SynthState.controls.applyTuning.disabled = true;
+                    SynthState.controls.tuningFile.value = '';
+
+                    // Reset all active voices
+                    Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
+                        const frequency = TuningSystem.noteToFreq(note);
+                        const now = Synth.audioContext.currentTime;
+                        voice.oscillators.forEach(osc => {
+                            osc.frequency.setValueAtTime(frequency, now);
+                        });
+                        if (voice.fmOsc) {
+                            voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
+                        }
+                    });
+                });
+
+                // Setup pitch bend range controls
                 if (SynthState.controls.pitchBendRange === null) {
                     console.error('pitchBendRange element not found');
                 } else {
@@ -1185,16 +1427,23 @@
                     this.updatePitchBendRange(parseInt(SynthState.controls.pitchBendRange.value) || 2);
                 }
 
-                // Set initial values for controls
+                // Setup range increment/decrement controls
+                document.getElementById('incrementRange').addEventListener('click', () => this.incrementPitchBendRange());
+                document.getElementById('decrementRange').addEventListener('click', () => this.decrementPitchBendRange());
+
+                // Setup initial control states
                 this.updateMasterVolume();
                 this.updateMasterReverb();
                 this.updateMasterDelay();
                 this.updateMasterEQ();
 
+                // Initialize UI
                 UI.createPiano();
                 UI.initializeEventListeners();
                 this.updateVisualizer();
                 this.updateParams();
+
+                console.log('Synth initialization complete');
             },
             initAudioContext() {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -1325,67 +1574,6 @@
                 });
             },
 
-            start() {
-                SynthState.controls = {
-                    masterVolume: document.getElementById('masterVolume'),
-                    masterReverb: document.getElementById('masterReverb'),
-                    masterDelay: document.getElementById('masterDelay'),
-                    masterLowEQ: document.getElementById('masterLowEQ'),
-                    masterMidEQ: document.getElementById('masterMidEQ'),
-                    masterHighEQ: document.getElementById('masterHighEQ'),
-                    waveform: document.getElementById('waveform'),
-                    unison: document.getElementById('unison'),
-                    detune: document.getElementById('detune'),
-                    fmAmount: document.getElementById('fmAmount'),
-                    filterToggle: document.getElementById('filterToggle'),
-                    filterType: document.getElementById('filterType'),
-                    filterCutoff: document.getElementById('filterCutoff'),
-                    filterResonance: document.getElementById('filterResonance'),
-                    filterEnvAmount: document.getElementById('filterEnvAmount'),
-                    attack: document.getElementById('attack'),
-                    decay: document.getElementById('decay'),
-                    sustain: document.getElementById('sustain'),
-                    release: document.getElementById('release'),
-                    lfoRate: document.getElementById('lfoRate'),
-                    lfoAmount: document.getElementById('lfoAmount'),
-                    noiseAmount: document.getElementById('noiseAmount'),
-                    arpToggle: document.getElementById('arpToggle'),
-                    arpPattern: document.getElementById('arpPattern'),
-                    arpSpeed: document.getElementById('arpSpeed'),
-                    arpClock: document.getElementById('arpClock'),
-                    fmToggle: document.getElementById('fmToggle'),
-                    lfoToggle: document.getElementById('lfoToggle'),
-                    noiseToggle: document.getElementById('noiseToggle'),
-                    pitchBendWheel: document.getElementById('pitchBendWheel'),
-                    pitchBendRange: document.getElementById('pitchBendRange'),
-                };
-
-                SynthState.controls.fmToggle.checked = SynthState.fmEnabled;
-                SynthState.controls.lfoToggle.checked = SynthState.lfoEnabled;
-                SynthState.controls.noiseToggle.checked = SynthState.noiseEnabled;
-
-                document.getElementById('incrementRange').addEventListener('click', () => this.incrementPitchBendRange());
-                document.getElementById('decrementRange').addEventListener('click', () => this.decrementPitchBendRange());
-
-                // Ensure pitchBendRange is not null before using its value
-                if (SynthState.controls.pitchBendRange === null) {
-                    console.error('pitchBendRange element not found');
-                } else {
-                    // Initialize pitch bend range
-                    this.updatePitchBendRange(parseInt(SynthState.controls.pitchBendRange.value) || 2);
-                }
-
-                // Set initial values for controls
-                this.updateMasterVolume();
-                this.updateMasterReverb();
-                this.updateMasterDelay();
-                this.updateMasterEQ();
-
-                UI.createPiano();
-                UI.initializeEventListeners();
-                this.updateVisualizer();
-                this.updateParams();
-            },
             updateMasterReverb() {
                 const reverbAmount = parseFloat(SynthState.controls.masterReverb.value);
                 const dryAmount = Math.cos(reverbAmount * 0.5 * Math.PI);

@@ -456,3 +456,77 @@ select {
   color: #00bfff;
   text-shadow: 0 0 5px #00bfff, 0 0 10px #00bfff;
 }
+
+.control input[type="file"] {
+  width: 100%;
+  padding: 8px;
+  background-color: #4a4a4a;
+  border: none;
+  border-radius: 5px;
+  color: #e0e0e0;
+  cursor: pointer;
+}
+
+.control input[type="file"]::-webkit-file-upload-button {
+  background: #00ff9d;
+  border: none;
+  border-radius: 3px;
+  padding: 5px 10px;
+  color: #1e1e1e;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.control input[type="file"]::-webkit-file-upload-button:hover {
+  background: #00cc7d;
+}
+
+#resetTuning {
+  width: 100%;
+  padding: 8px;
+  background-color: #4a4a4a;
+  border: none;
+  border-radius: 5px;
+  color: #00ff9d;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#resetTuning:hover {
+  background-color: #5a5a5a;
+}
+
+.tuning-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.tuning-buttons button {
+  flex: 1;
+  padding: 8px;
+  background-color: #4a4a4a;
+  border: none;
+  border-radius: 5px;
+  color: #00ff9d;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.tuning-buttons button:hover:not(:disabled) {
+  background-color: #5a5a5a;
+}
+
+.tuning-buttons button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#applyTuning:not(:disabled) {
+  background-color: #006633;
+}
+
+#applyTuning:not(:disabled):hover {
+  background-color: #008844;
+}
