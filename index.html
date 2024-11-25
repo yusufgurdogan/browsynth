@@ -282,7 +282,9 @@
                     <label for="tuningPreset">Select Tuning</label>
                     <select id="tuningPreset">
                         <option value="">Default (12-TET)</option>
-                        <option value="17-tone">17-Tone Scale</option>
+                        <option value="13-tone">13-Tone Scale</option>
+                        <option value="17-tone">17-Tone Scale ❤️</option>
+                        <option value="24-tone">24-Tone Scale</option>
                     </select>
                 </div>
                 <div class="control">
@@ -385,8 +387,7 @@
             frequencies: new Array(128).fill(null),
             isCustomTuning: false,
             // Update the parseTunFile method in TuningSystem
-            // Update the parseTunFile method in TuningSystem
-            parseTunFile(content) {
+            parseTunFile(content, scaleType) {
                 console.log('Parsing tuning file...');
                 const lines = content.split('\n');
                 const frequencies = new Array(128).fill(null);
@@ -395,7 +396,14 @@
                 // Reference C4 = 261.63 Hz (MIDI note 60)
                 const MIDDLE_C = 261.63;
                 const OCTAVE_RATIO = 2;
-                const STEPS_PER_OCTAVE = 17;  // Your scale has 17 tones per octave
+
+                // Set steps per octave based on scale type
+                const STEPS_PER_OCTAVE = {
+                    '17-tone': 17,
+                    '13-tone': 13,
+                    '24-tone': 24
+                }[scaleType] || 12; // default to 12 if scale type not found
+
                 const STEP_RATIO = Math.pow(OCTAVE_RATIO, 1 / STEPS_PER_OCTAVE);
 
                 // Find the base frequency (C4) in the tuning file
@@ -478,17 +486,12 @@
                 const noteIndex = SynthConfig.notes.indexOf(noteName);
                 const midiNote = noteIndex + (octave + 1) * 12;
 
-                console.log('Note:', note, 'MIDI:', midiNote, 'Custom Tuning:', this.isCustomTuning,
-                    'Has Custom Frequency:', this.frequencies[midiNote] !== null);
-
                 if (this.isCustomTuning && this.frequencies[midiNote] !== null) {
                     const customFreq = this.frequencies[midiNote];
-                    console.log(`Using custom frequency for ${note} (MIDI ${midiNote}): ${customFreq}Hz`);
                     return customFreq;
                 }
 
                 const defaultFreq = 440 * Math.pow(2, (midiNote - 69) / 12);
-                console.log(`Using default frequency for ${note} (MIDI ${midiNote}): ${defaultFreq}Hz`);
                 return defaultFreq;
             }
         };
@@ -1211,14 +1214,36 @@
                         return;
                     }
 
+                    // Define tuning URLs
+                    const tuningUrls = {
+                        '17-tone': {
+                            primary: 'https://magic.decentralized-content.com/ipfs/bafybeihi7nw54z2avcns57c2jzafivikep5qts2ojt2rdfv4b3t26onbu4?filename=17-tone%20Scale.tun',
+                            backup: 'https://ipfs.oversas.org/ipfs/QmWQJqerjRcjhF3i7oPtRU9AUDy6Krq2mxZygySbQfiYpJ?filename=17-tone%20Scale.tun'
+                        },
+                        '13-tone': {
+                            primary: 'https://magic.decentralized-content.com/ipfs/bafybeig3pxitw2dmiozgrqjc5r3wp2i3izri476v5ckc4nzncl5a4cyyeu',
+                            backup: 'https://ipfs.oversas.org/ipfs/bafybeig3pxitw2dmiozgrqjc5r3wp2i3izri476v5ckc4nzncl5a4cyyeu'
+                        },
+                        '24-tone': {
+                            primary: 'https://magic.decentralized-content.com/ipfs/bafybeieocuhzmzjytzccmsog34hcnaf5t234ifqvsgz5zvfg6dtqjnpmj4',
+                            backup: 'https://ipfs.oversas.org/ipfs/bafybeieocuhzmzjytzccmsog34hcnaf5t234ifqvsgz5zvfg6dtqjnpmj4'
+                        }
+                    };
+
+                    const selectedUrls = tuningUrls[selectedTuning];
+                    if (!selectedUrls) {
+                        console.error('Unknown tuning selected');
+                        return;
+                    }
+
                     try {
-                        const response = await fetch('https://magic.decentralized-content.com/ipfs/bafybeihi7nw54z2avcns57c2jzafivikep5qts2ojt2rdfv4b3t26onbu4?filename=17-tone%20Scale.tun');
+                        const response = await fetch(selectedUrls.primary);
                         if (!response.ok) {
                             throw new Error('Failed to fetch tuning file');
                         }
 
                         const tuningContent = await response.text();
-                        const frequencies = TuningSystem.parseTunFile(tuningContent);
+                        const frequencies = TuningSystem.parseTunFile(tuningContent, selectedTuning);  // Pass the selected tuning type
 
                         if (!frequencies) {
                             console.error('Failed to parse tuning file');
@@ -1243,13 +1268,13 @@
                         console.error('Error loading tuning preset:', error);
                         // Try backup URL if primary fails
                         try {
-                            const backupResponse = await fetch('https://ipfs.oversas.org/ipfs/QmWQJqerjRcjhF3i7oPtRU9AUDy6Krq2mxZygySbQfiYpJ?filename=17-tone%20Scale.tun');
+                            const backupResponse = await fetch(selectedUrls.backup);
                             if (!backupResponse.ok) {
                                 throw new Error('Failed to fetch tuning file from backup');
                             }
 
                             const tuningContent = await backupResponse.text();
-                            const frequencies = TuningSystem.parseTunFile(tuningContent);
+                            const frequencies = TuningSystem.parseTunFile(tuningContent, selectedTuning);
 
                             if (!frequencies) {
                                 console.error('Failed to parse tuning file from backup');
