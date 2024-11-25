@@ -279,7 +279,14 @@
             <div class="control-group">
                 <h2>Tuning</h2>
                 <div class="control">
-                    <label for="tuningFile">Import .tun file</label>
+                    <label for="tuningPreset">Select Tuning</label>
+                    <select id="tuningPreset">
+                        <option value="">Default (12-TET)</option>
+                        <option value="17-tone">17-Tone Scale</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="tuningFile">Or import .tun file</label>
                     <input type="file" id="tuningFile" accept=".tun">
                 </div>
                 <div class="control">
@@ -1195,6 +1202,82 @@
 
                 const toggleVisualizerButton = document.getElementById('toggleVisualizer');
                 toggleVisualizerButton.addEventListener('click', () => Synth.toggleVisualizer());
+                // Add tuning preset handler
+                SynthState.controls.tuningPreset.addEventListener('change', async (e) => {
+                    const selectedTuning = e.target.value;
+                    if (!selectedTuning) {
+                        // Default tuning selected
+                        TuningSystem.resetToDefaultTuning();
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('https://magic.decentralized-content.com/ipfs/bafybeihi7nw54z2avcns57c2jzafivikep5qts2ojt2rdfv4b3t26onbu4?filename=17-tone%20Scale.tun');
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch tuning file');
+                        }
+
+                        const tuningContent = await response.text();
+                        const frequencies = TuningSystem.parseTunFile(tuningContent);
+
+                        if (!frequencies) {
+                            console.error('Failed to parse tuning file');
+                            return;
+                        }
+
+                        TuningSystem.importTuning(frequencies);
+
+                        // Update all active voices with new tuning
+                        Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
+                            const frequency = TuningSystem.noteToFreq(note);
+                            const now = Synth.audioContext.currentTime;
+                            voice.oscillators.forEach(osc => {
+                                osc.frequency.setValueAtTime(frequency, now);
+                            });
+                            if (voice.fmOsc) {
+                                voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
+                            }
+                        });
+
+                    } catch (error) {
+                        console.error('Error loading tuning preset:', error);
+                        // Try backup URL if primary fails
+                        try {
+                            const backupResponse = await fetch('https://ipfs.oversas.org/ipfs/QmWQJqerjRcjhF3i7oPtRU9AUDy6Krq2mxZygySbQfiYpJ?filename=17-tone%20Scale.tun');
+                            if (!backupResponse.ok) {
+                                throw new Error('Failed to fetch tuning file from backup');
+                            }
+
+                            const tuningContent = await backupResponse.text();
+                            const frequencies = TuningSystem.parseTunFile(tuningContent);
+
+                            if (!frequencies) {
+                                console.error('Failed to parse tuning file from backup');
+                                return;
+                            }
+
+                            TuningSystem.importTuning(frequencies);
+
+                            // Update all active voices with new tuning
+                            Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
+                                const frequency = TuningSystem.noteToFreq(note);
+                                const now = Synth.audioContext.currentTime;
+                                voice.oscillators.forEach(osc => {
+                                    osc.frequency.setValueAtTime(frequency, now);
+                                });
+                                if (voice.fmOsc) {
+                                    voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
+                                }
+                            });
+
+                        } catch (backupError) {
+                            console.error('Error loading tuning preset from backup:', backupError);
+                            alert('Failed to load tuning preset. Please try again later.');
+                            e.target.value = ''; // Reset to default
+                            TuningSystem.resetToDefaultTuning();
+                        }
+                    }
+                });
             }
         };
 
@@ -1222,6 +1305,7 @@
                 exportWavButton.addEventListener('click', () => this.exportWav());
 
                 // Initialize tuning controls early
+                SynthState.controls.tuningPreset = document.getElementById('tuningPreset');
                 const applyTuningButton = document.getElementById('applyTuning');
                 const resetTuningButton = document.getElementById('resetTuning');
                 const tuningFileInput = document.getElementById('tuningFile');
@@ -1314,6 +1398,7 @@
                     noiseToggle: document.getElementById('noiseToggle'),
                     pitchBendWheel: document.getElementById('pitchBendWheel'),
                     pitchBendRange: document.getElementById('pitchBendRange'),
+                    tuningPreset: document.getElementById('tuningPreset'),
                     tuningFile: document.getElementById('tuningFile'),
                     applyTuning: document.getElementById('applyTuning'),
                     resetTuning: document.getElementById('resetTuning')
