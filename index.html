@@ -112,6 +112,13 @@
             <div class="control-group">
                 <h2>Oscillator</h2>
                 <div class="control">
+                    <label for="synthMode">Mode</label>
+                    <select id="synthMode">
+                        <option value="waveform">Waveform</option>
+                        <option value="piano">Toy Piano</option>
+                    </select>
+                </div>
+                <div class="control">
                     <label for="waveform">Waveform</label>
                     <select id="waveform">
                         <option value="sine">Sine</option>
@@ -542,6 +549,12 @@
         const Voice = {
             create(note) {
                 if (!Synth.audioContext) return null;
+
+                // Check synth mode and create appropriate voice
+                const synthMode = SynthState.controls.synthMode.value;
+                if (synthMode === 'piano') {
+                    return StringVoice.create(note);
+                }
                 const frequency = TuningSystem.noteToFreq(note); // Call directly on TuningSystem
                 const now = Synth.audioContext.currentTime;
 
@@ -723,12 +736,63 @@
                 }
                 if (SynthState.activeVoices[note]) return;
 
+                const voice = this.create(note);
+                if (!voice) return;
+
+                // Special handling for piano voices
+                if (voice.attackOsc) {
+                    const now = Synth.audioContext.currentTime;
+                    const attackTime = 0.01;  // Very quick attack
+                    const decayTime = 0.1;
+                    const sustainLevel = parseFloat(SynthState.controls.sustain.value) * 0.7;
+
+                    // Main envelope
+                    voice.mainGain.gain.setValueAtTime(0, now);
+                    voice.mainGain.gain.linearRampToValueAtTime(1, now + attackTime);
+                    voice.mainGain.gain.exponentialRampToValueAtTime(sustainLevel + 0.001, now + attackTime + decayTime);
+
+                    // Attack noise envelope
+                    voice.attackGain.gain.setValueAtTime(0.3, now);
+                    voice.attackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+                    SynthState.activeVoices[note] = voice;
+                    SynthState.activeNotes.add(note);
+                    Synth.recordNoteEvent(note, true);
+
+                    const keyElement = document.querySelector(`.key[data-note="${note}"]`);
+                    if (keyElement) keyElement.classList.add('active');
+                    return;
+                }
+
+                // Special handling for piano voices
+                if (voice.strike) {
+                    const now = Synth.audioContext.currentTime;
+                    const attackTime = Math.min(0.02, parseFloat(SynthState.controls.attack.value));
+                    const decayTime = parseFloat(SynthState.controls.decay.value);
+                    const sustain = parseFloat(SynthState.controls.sustain.value) * 0.5;
+
+                    voice.gainNode.gain.cancelScheduledValues(now);
+                    voice.gainNode.gain.setValueAtTime(0, now);
+                    voice.gainNode.gain.linearRampToValueAtTime(1, now + attackTime);
+                    voice.gainNode.gain.exponentialRampToValueAtTime(sustain + 0.001, now + attackTime + decayTime);
+
+                    voice.strikeGain.gain.setValueAtTime(1, now);
+                    voice.strikeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+                    SynthState.activeVoices[note] = voice;
+                    SynthState.activeNotes.add(note);
+                    Synth.recordNoteEvent(note, true);
+
+                    const keyElement = document.querySelector(`.key[data-note="${note}"]`);
+                    if (keyElement) keyElement.classList.add('active');
+                    return;
+                }
+
                 if (Object.keys(SynthState.activeVoices).length >= SynthConfig.maxPolyphony) {
                     const oldestNote = Object.keys(SynthState.activeVoices)[0];
                     this.release(oldestNote);
                 }
 
-                const voice = this.create(note);
                 if (voice && voice.updatePitchBend) {
                     const currentPitchBend = parseFloat(SynthState.controls.pitchBendWheel?.value) || 0;
                     voice.updatePitchBend(currentPitchBend);
@@ -792,44 +856,43 @@
                 Synth.recordNoteEvent(note, false);
                 if (!voice) return;
 
-                const now = Synth.audioContext.currentTime;
                 const releaseTime = parseFloat(SynthState.controls.release.value);
 
-                voice.gainNode.gain.cancelScheduledValues(now);
-                voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
-                voice.gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
+                // If voice has custom release method, use it
+                if (voice.release) {
+                    voice.release(releaseTime);
+                } else {
+                    const now = Synth.audioContext.currentTime;
+                    voice.gainNode.gain.cancelScheduledValues(now);
+                    voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
+                    voice.gainNode.gain.linearRampToValueAtTime(0, now + releaseTime);
 
-                // Apply noise release
-                if (SynthState.noiseEnabled) {
-                    voice.noiseGain.gain.cancelScheduledValues(now);
-                    voice.noiseGain.gain.setValueAtTime(voice.noiseGain.gain.value, now);
-                    voice.noiseGain.gain.linearRampToValueAtTime(0, now + releaseTime);
+                    setTimeout(() => {
+                        if (voice.oscillators) {
+                            voice.oscillators.forEach(osc => {
+                                osc.stop();
+                                osc.disconnect();
+                            });
+                        }
+                        if (voice.gainNode) voice.gainNode.disconnect();
+                        if (voice.filter) voice.filter.disconnect();
+                        if (voice.fmOsc) {
+                            voice.fmOsc.stop();
+                            voice.fmOsc.disconnect();
+                        }
+                        if (voice.fmGain) voice.fmGain.disconnect();
+                        if (voice.noiseOsc) {
+                            voice.noiseOsc.stop();
+                            voice.noiseOsc.disconnect();
+                        }
+                        if (voice.noiseGain) voice.noiseGain.disconnect();
+                        if (voice.lfo) {
+                            voice.lfo.stop();
+                            voice.lfo.disconnect();
+                        }
+                        if (voice.lfoGain) voice.lfoGain.disconnect();
+                    }, releaseTime * 1000);
                 }
-
-                // Apply LFO release
-                if (SynthState.lfoEnabled) {
-                    voice.lfoGain.gain.cancelScheduledValues(now);
-                    voice.lfoGain.gain.setValueAtTime(voice.lfoGain.gain.value, now);
-                    voice.lfoGain.gain.linearRampToValueAtTime(0, now + releaseTime);
-                }
-
-                setTimeout(() => {
-                    voice.oscillators.forEach(osc => {
-                        osc.stop();
-                        osc.disconnect();
-                    });
-                    voice.gainNode.disconnect();
-                    voice.filter.disconnect();
-                    voice.fmOsc.stop();
-                    voice.fmOsc.disconnect();
-                    voice.fmGain.disconnect();
-                    voice.noiseOsc.stop();
-                    voice.noiseOsc.disconnect();
-                    voice.noiseGain.disconnect();
-                    voice.lfo.stop();
-                    voice.lfo.disconnect();
-                    voice.lfoGain.disconnect();
-                }, releaseTime * 1000);
 
                 delete SynthState.activeVoices[note];
                 SynthState.activeNotes.delete(note);
@@ -837,7 +900,6 @@
                 const keyElement = document.querySelector(`.key[data-note="${note}"]`);
                 if (keyElement) keyElement.classList.remove('active');
             },
-
             stopAllNotes: function (isArpeggiator = false) {
                 if (SynthState.arpeggiator.isOn && !isArpeggiator) {
                     Arpeggiator.stop();
@@ -853,7 +915,101 @@
                 keys.forEach(key => key.classList.remove('active'));
             }
         };
-        // Bind the method to the Voice object
+
+        // Add this new object right after the Voice object
+        const StringVoice = {
+            create(note) {
+                if (!Synth.audioContext) return null;
+                const ctx = Synth.audioContext;
+                const frequency = TuningSystem.noteToFreq(note);
+                const now = ctx.currentTime;
+
+                // Create main oscillator bank for piano tone
+                const oscs = [];
+                const gains = [];
+                const freqMultipliers = [1, 2, 4]; // Fundamental and harmonics
+                const gainValues = [1, 0.6, 0.3];  // Relative volumes
+
+                for (let i = 0; i < freqMultipliers.length; i++) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.type = 'triangle';  // Base tone
+                    osc.frequency.value = frequency * freqMultipliers[i];
+                    gain.gain.value = gainValues[i] * 0.2;
+
+                    osc.connect(gain);
+                    oscs.push(osc);
+                    gains.push(gain);
+                }
+
+                // Attack noise for hammer sound
+                const attackOsc = ctx.createOscillator();
+                const attackGain = ctx.createGain();
+                attackOsc.type = 'sawtooth';  // Changed from 'white' to 'sawtooth'
+                attackGain.gain.value = 0;
+                attackOsc.connect(attackGain);
+
+                // Main gain node
+                const mainGain = ctx.createGain();
+                mainGain.gain.value = 0;
+
+                // Filter for warmth
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 5000;
+                filter.Q.value = 0.5;
+
+                // Connect everything
+                gains.forEach(g => g.connect(filter));
+                attackGain.connect(filter);
+                filter.connect(mainGain);
+                mainGain.connect(Synth.compressor);
+
+                // Start all oscillators
+                oscs.forEach(osc => osc.start(now));
+                attackOsc.start(now);
+
+                // Add release method to the voice
+                const release = (releaseTime) => {
+                    const now = ctx.currentTime;
+                    mainGain.gain.cancelScheduledValues(now);
+                    mainGain.gain.setValueAtTime(mainGain.gain.value, now);
+                    mainGain.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
+
+                    // Cleanup after release
+                    setTimeout(() => {
+                        oscs.forEach(osc => {
+                            osc.stop();
+                            osc.disconnect();
+                        });
+                        gains.forEach(gain => gain.disconnect());
+                        attackOsc.stop();
+                        attackOsc.disconnect();
+                        attackGain.disconnect();
+                        filter.disconnect();
+                        mainGain.disconnect();
+                    }, releaseTime * 1000);
+                };
+
+                return {
+                    oscillators: oscs,
+                    gains: gains,
+                    attackOsc,
+                    attackGain,
+                    mainGain,
+                    filter,
+                    frequency,
+                    release,  // Add release method to returned object
+                    updateVoice: () => {
+                        filter.frequency.value = 5000;
+                        gains.forEach((gain, i) => {
+                            gain.gain.value = gainValues[i] * 0.2;
+                        });
+                    }
+                };
+            }
+        };
         Voice.stopAllNotes = Voice.stopAllNotes.bind(Voice);
         // Arpeggiator functionality
         const Arpeggiator = {
@@ -1391,6 +1547,7 @@
 
                 // Initialize all controls
                 SynthState.controls = {
+                    synthMode: document.getElementById('synthMode'),
                     whiteKeysOnlyToggle: document.getElementById('whiteKeysOnlyToggle'),
                     masterVolume: document.getElementById('masterVolume'),
                     masterReverb: document.getElementById('masterReverb'),
