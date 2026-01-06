@@ -530,3 +530,381 @@ select {
 #applyTuning:not(:disabled):hover {
   background-color: #008844;
 }
+
+/* Knob value display */
+.knob-value {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #00ff9d;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.circular-control {
+  position: relative;
+}
+
+/* Preset controls */
+#presetSelect {
+  background-color: #4a4a4a;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+#presetSelect:hover {
+  background-color: #5a5a5a;
+}
+
+#presetSelect optgroup {
+  background-color: #333;
+  color: #00ff9d;
+  font-weight: bold;
+}
+
+#presetSelect option {
+  background-color: #4a4a4a;
+  color: #e0e0e0;
+  padding: 5px;
+}
+
+.control-separator {
+  width: 1px;
+  height: 30px;
+  background-color: #4a4a4a;
+  margin: 5px 10px;
+}
+
+/* MIDI Enable Button States */
+#midiEnableButton.midi-connected {
+  color: #00ff9d;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+}
+
+#midiEnableButton.midi-disconnected {
+  color: #ffaa00;
+}
+
+#midiEnableButton.midi-denied {
+  color: #ff6b6b;
+}
+
+#midiEnableButton.midi-unsupported {
+  color: #666;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Recorder controls layout adjustment */
+#recorder-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  background-color: #333;
+  padding: 10px 15px;
+  border-radius: 5px;
+  flex-wrap: wrap;
+}
+
+/* ========================================
+   WAVETABLE EDITOR STYLES
+   ======================================== */
+
+#wavetableModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.wavetable-modal-content {
+  background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
+  border-radius: 15px;
+  width: 90%;
+  max-width: 1200px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 50px rgba(0, 255, 157, 0.2), inset 0 0 1px rgba(255, 255, 255, 0.1);
+  border: 1px solid #333;
+}
+
+.wavetable-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #333;
+  background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
+  border-radius: 15px 15px 0 0;
+}
+
+.wavetable-header h2 {
+  margin: 0;
+  color: #00ff9d;
+  font-size: 1.3em;
+  text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5em;
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+  padding: 5px 10px;
+}
+
+.close-btn:hover {
+  color: #ff6b6b;
+  transform: scale(1.1);
+}
+
+.wavetable-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 20px;
+  gap: 20px;
+}
+
+/* 3D View Container */
+.wavetable-3d-container {
+  flex: 1.2;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0a;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+#wavetable3D {
+  flex: 1;
+  width: 100%;
+  cursor: grab;
+}
+
+#wavetable3D:active {
+  cursor: grabbing;
+}
+
+.wavetable-3d-controls {
+  display: flex;
+  gap: 20px;
+  padding: 10px 15px;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+}
+
+.wavetable-3d-controls label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #888;
+  font-size: 0.85em;
+}
+
+.wavetable-3d-controls input[type="range"] {
+  width: 100px;
+  accent-color: #00ff9d;
+}
+
+/* 2D Editor Container */
+.wavetable-2d-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0a;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.wavetable-2d-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  color: #888;
+  font-size: 0.9em;
+}
+
+.frame-nav {
+  display: flex;
+  gap: 5px;
+}
+
+.frame-btn {
+  background: #333;
+  border: none;
+  color: #888;
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.frame-btn:hover {
+  background: #444;
+  color: #00ff9d;
+}
+
+#wavetable2D {
+  flex: 1;
+  width: 100%;
+  cursor: crosshair;
+}
+
+/* Tools Panel */
+.wavetable-tools {
+  display: flex;
+  gap: 5px;
+  padding: 10px 15px;
+  background: #1a1a1a;
+  border-top: 1px solid #333;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.tool-btn {
+  background: #333;
+  border: none;
+  color: #888;
+  width: 36px;
+  height: 36px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.tool-btn:hover {
+  background: #444;
+  color: #fff;
+}
+
+.tool-btn.active {
+  background: #00ff9d;
+  color: #000;
+}
+
+.tool-separator {
+  width: 1px;
+  height: 24px;
+  background: #333;
+  margin: 0 5px;
+}
+
+.wavetable-tools select {
+  background: #333;
+  border: none;
+  color: #888;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.wavetable-tools select:hover {
+  background: #444;
+}
+
+/* Footer */
+.wavetable-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-top: 1px solid #333;
+  background: linear-gradient(to top, #1a1a1a, #222);
+  border-radius: 0 0 15px 15px;
+}
+
+.wavetable-footer select {
+  background: #333;
+  border: none;
+  color: #888;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.apply-btn {
+  background: linear-gradient(145deg, #00ff9d, #00cc7d);
+  border: none;
+  color: #000;
+  padding: 12px 30px;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.apply-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(0, 255, 157, 0.5);
+}
+
+/* Wavetable Edit Button in Controls */
+.wavetable-edit-btn {
+  background: linear-gradient(145deg, #333, #444);
+  border: 1px solid #555;
+  color: #00ff9d;
+  padding: 8px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  font-size: 0.9em;
+}
+
+.wavetable-edit-btn:hover {
+  background: linear-gradient(145deg, #444, #555);
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.3);
+}
+
+.wavetable-edit-btn i {
+  font-size: 1.1em;
+}
+
+/* Wavetable Controls in Oscillator Group */
+#wavetableControls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#wavetableControls .control {
+  margin-top: 5px;
+}

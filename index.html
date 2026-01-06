@@ -19,6 +19,67 @@
             <button id="startButton">Start Synth</button>
         </div>
     </div>
+
+    <!-- Wavetable Editor Modal -->
+    <div id="wavetableModal" class="modal" style="display: none;">
+        <div class="wavetable-modal-content">
+            <div class="wavetable-header">
+                <h2>Wavetable Editor</h2>
+                <button id="closeWavetableEditor" class="close-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="wavetable-main">
+                <div class="wavetable-3d-container">
+                    <canvas id="wavetable3D"></canvas>
+                    <div class="wavetable-3d-controls">
+                        <label>Rotate: <input type="range" id="wt3dRotateX" min="-90" max="90" value="-30"></label>
+                        <label>Zoom: <input type="range" id="wt3dZoom" min="0.5" max="3" step="0.1" value="1.5"></label>
+                    </div>
+                </div>
+                <div class="wavetable-2d-container">
+                    <div class="wavetable-2d-header">
+                        <span>Frame: <span id="currentFrameNum">1</span> / <span id="totalFrames">8</span></span>
+                        <div class="frame-nav">
+                            <button id="prevFrame" class="frame-btn"><i class="fas fa-chevron-left"></i></button>
+                            <button id="nextFrame" class="frame-btn"><i class="fas fa-chevron-right"></i></button>
+                            <button id="addFrame" class="frame-btn" title="Add Frame"><i class="fas fa-plus"></i></button>
+                            <button id="deleteFrame" class="frame-btn" title="Delete Frame"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <canvas id="wavetable2D"></canvas>
+                    <div class="wavetable-tools">
+                        <button id="toolDraw" class="tool-btn active" title="Draw"><i class="fas fa-pencil-alt"></i></button>
+                        <button id="toolLine" class="tool-btn" title="Line"><i class="fas fa-minus"></i></button>
+                        <button id="toolSmooth" class="tool-btn" title="Smooth"><i class="fas fa-water"></i></button>
+                        <button id="toolNormalize" class="tool-btn" title="Normalize"><i class="fas fa-expand-arrows-alt"></i></button>
+                        <span class="tool-separator"></span>
+                        <select id="presetWaveform">
+                            <option value="">Load Shape...</option>
+                            <option value="sine">Sine</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="square">Square</option>
+                            <option value="pulse25">Pulse 25%</option>
+                            <option value="pulse10">Pulse 10%</option>
+                            <option value="random">Random</option>
+                            <option value="clear">Clear</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="wavetable-footer">
+                <select id="wavetablePresets">
+                    <option value="">Load Wavetable...</option>
+                    <option value="basic">Basic Shapes</option>
+                    <option value="pwm">PWM Sweep</option>
+                    <option value="formant">Formant</option>
+                    <option value="digital">Digital</option>
+                    <option value="analog">Analog</option>
+                    <option value="vocal">Vocal</option>
+                </select>
+                <button id="applyWavetable" class="apply-btn">Apply</button>
+            </div>
+        </div>
+    </div>
     <div id="synth-container">
         <h1>Browsynth</h1>
         <div id="synth-content">
@@ -69,26 +130,43 @@
             <button id="toggleVisualizer" class="control-button" title="Show/Hide Visualizer">
                 <i class="fa-solid fa-wave-square"></i>
             </button>
+            <span class="control-separator"></span>
+            <select id="presetSelect" title="Load Preset">
+                <option value="">-- Presets --</option>
+            </select>
+            <button id="savePresetButton" class="control-button" title="Save Preset">
+                <i class="fas fa-plus"></i>
+            </button>
+            <button id="deletePresetButton" class="control-button" title="Delete Preset">
+                <i class="fas fa-trash"></i>
+            </button>
+            <span class="control-separator"></span>
+            <button id="midiEnableButton" class="control-button" title="Enable MIDI Input">
+                <i class="fas fa-plug"></i>
+            </button>
         </div>
         <div id="controls">
             <div class="control-group">
                 <h2>Master</h2>
                 <div class="control">
                     <label for="masterVolume">Volume</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="%">
                         <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.7">
+                        <span class="knob-value">70%</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="masterReverb">Reverb</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="%">
                         <input type="range" id="masterReverb" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="masterDelay">Delay</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="%">
                         <input type="range" id="masterDelay" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
                     </div>
                 </div>
             </div>
@@ -115,10 +193,11 @@
                     <label for="synthMode">Mode</label>
                     <select id="synthMode">
                         <option value="waveform">Waveform</option>
+                        <option value="wavetable">Wavetable</option>
                         <option value="piano">Toy Piano</option>
                     </select>
                 </div>
-                <div class="control">
+                <div class="control" id="waveformControl">
                     <label for="waveform">Waveform</label>
                     <select id="waveform">
                         <option value="sine">Sine</option>
@@ -127,16 +206,31 @@
                         <option value="triangle">Triangle</option>
                     </select>
                 </div>
+                <div class="control" id="wavetableControls" style="display: none;">
+                    <label>Wavetable</label>
+                    <button id="openWavetableEditor" class="wavetable-edit-btn">
+                        <i class="fas fa-wave-square"></i> Edit
+                    </button>
+                    <div class="control" style="margin-top: 10px;">
+                        <label for="wavetablePosition">Position</label>
+                        <div class="circular-control" data-unit="%">
+                            <input type="range" id="wavetablePosition" min="0" max="1" step="0.001" value="0">
+                            <span class="knob-value">0%</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="control">
                     <label for="unison">Unison</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="x">
                         <input type="range" id="unison" min="1" max="8" step="1" value="1">
+                        <span class="knob-value">1x</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="detune">Detune</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="ct">
                         <input type="range" id="detune" min="0" max="100" step="1" value="0">
+                        <span class="knob-value">0ct</span>
                     </div>
                 </div>
                 <div class="control">
@@ -145,8 +239,9 @@
                 </div>
                 <div class="control">
                     <label for="fmAmount">FM Amount</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="">
                         <input type="range" id="fmAmount" min="0" max="1000" step="1" value="0">
+                        <span class="knob-value">0</span>
                     </div>
                 </div>
             </div>
@@ -166,20 +261,23 @@
                 </div>
                 <div class="control">
                     <label for="filterCutoff">Cutoff</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="Hz" data-format="freq">
                         <input type="range" id="filterCutoff" min="20" max="20000" step="1" value="20000">
+                        <span class="knob-value">20kHz</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="filterResonance">Resonance</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="">
                         <input type="range" id="filterResonance" min="0" max="20" step="0.1" value="0">
+                        <span class="knob-value">0.0</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="filterEnvAmount">Env Amount</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="%">
                         <input type="range" id="filterEnvAmount" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
                     </div>
                 </div>
             </div>
@@ -187,26 +285,30 @@
                 <h2>Envelope</h2>
                 <div class="control">
                     <label for="attack">Attack</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="s" data-format="time">
                         <input type="range" id="attack" min="0" max="2" step="0.01" value="0.05">
+                        <span class="knob-value">50ms</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="decay">Decay</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="s" data-format="time">
                         <input type="range" id="decay" min="0" max="2" step="0.01" value="0.1">
+                        <span class="knob-value">100ms</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="sustain">Sustain</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="%">
                         <input type="range" id="sustain" min="0" max="1" step="0.01" value="0.5">
+                        <span class="knob-value">50%</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="release">Release</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="s" data-format="time">
                         <input type="range" id="release" min="0" max="5" step="0.01" value="0.5">
+                        <span class="knob-value">500ms</span>
                     </div>
                 </div>
             </div>
@@ -218,14 +320,16 @@
                 </div>
                 <div class="control">
                     <label for="lfoRate">Rate</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="Hz">
                         <input type="range" id="lfoRate" min="0" max="20" step="0.1" value="0">
+                        <span class="knob-value">0Hz</span>
                     </div>
                 </div>
                 <div class="control">
                     <label for="lfoAmount">Amount</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="">
                         <input type="range" id="lfoAmount" min="0" max="1000" step="1" value="50">
+                        <span class="knob-value">50</span>
                     </div>
                 </div>
             </div>
@@ -237,8 +341,9 @@
                 </div>
                 <div class="control">
                     <label for="noiseAmount">Amount</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="%">
                         <input type="range" id="noiseAmount" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
                     </div>
                 </div>
             </div>
@@ -271,8 +376,9 @@
                 </div>
                 <div class="control">
                     <label for="arpSpeed">Speed</label>
-                    <div class="circular-control">
+                    <div class="circular-control" data-unit="x">
                         <input type="range" id="arpSpeed" min="1" max="8" step="1" value="4">
+                        <span class="knob-value">4x</span>
                     </div>
                 </div>
             </div>
@@ -525,6 +631,814 @@
                 frequency: 1000,
                 Q: 0
             },
+            wavetable: {
+                frames: [],
+                position: 0,
+                periodicWave: null
+            }
+        };
+
+        // Wavetable Editor System
+        const WavetableEditor = {
+            FRAME_SIZE: 2048,
+            frames: [],
+            currentFrame: 0,
+            currentTool: 'draw',
+            isDrawing: false,
+            lastDrawPoint: null,
+            canvas2D: null,
+            ctx2D: null,
+            canvas3D: null,
+            gl: null,
+            rotateX: -30,
+            rotateY: 30,
+            zoom: 1.5,
+            animationId: null,
+            isDragging3D: false,
+            lastMouseX: 0,
+            lastMouseY: 0,
+
+            init() {
+                // Initialize with 8 frames of sine waves morphing to saw
+                this.frames = [];
+                for (let i = 0; i < 8; i++) {
+                    const frame = new Float32Array(this.FRAME_SIZE);
+                    const morphAmount = i / 7;
+                    for (let j = 0; j < this.FRAME_SIZE; j++) {
+                        const phase = (j / this.FRAME_SIZE) * Math.PI * 2;
+                        // Morph from sine to sawtooth
+                        const sine = Math.sin(phase);
+                        const saw = 1 - 2 * (j / this.FRAME_SIZE);
+                        frame[j] = sine * (1 - morphAmount) + saw * morphAmount;
+                    }
+                    this.frames.push(frame);
+                }
+
+                this.canvas2D = document.getElementById('wavetable2D');
+                this.ctx2D = this.canvas2D.getContext('2d');
+                this.canvas3D = document.getElementById('wavetable3D');
+
+                this.initWebGL();
+                this.setupEventListeners();
+                this.updateFrameDisplay();
+            },
+
+            initWebGL() {
+                this.gl = this.canvas3D.getContext('webgl') || this.canvas3D.getContext('experimental-webgl');
+                if (!this.gl) {
+                    console.error('WebGL not supported, falling back to 2D');
+                    return;
+                }
+
+                const gl = this.gl;
+
+                // Vertex shader - handles 3D positioning
+                const vsSource = `
+                    attribute vec3 aPosition;
+                    attribute vec3 aColor;
+                    uniform mat4 uModelViewMatrix;
+                    uniform mat4 uProjectionMatrix;
+                    varying vec3 vColor;
+                    void main() {
+                        gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(aPosition, 1.0);
+                        vColor = aColor;
+                    }
+                `;
+
+                // Fragment shader - handles coloring
+                const fsSource = `
+                    precision mediump float;
+                    varying vec3 vColor;
+                    void main() {
+                        gl_FragColor = vec4(vColor, 1.0);
+                    }
+                `;
+
+                // Compile shaders
+                const vertexShader = this.compileShader(gl, gl.VERTEX_SHADER, vsSource);
+                const fragmentShader = this.compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+                // Create program
+                this.program = gl.createProgram();
+                gl.attachShader(this.program, vertexShader);
+                gl.attachShader(this.program, fragmentShader);
+                gl.linkProgram(this.program);
+
+                if (!gl.getProgramParameter(this.program, gl.LINK_STATUS)) {
+                    console.error('Shader program failed:', gl.getProgramInfoLog(this.program));
+                    return;
+                }
+
+                // Get attribute/uniform locations
+                this.attribLocations = {
+                    position: gl.getAttribLocation(this.program, 'aPosition'),
+                    color: gl.getAttribLocation(this.program, 'aColor')
+                };
+                this.uniformLocations = {
+                    modelViewMatrix: gl.getUniformLocation(this.program, 'uModelViewMatrix'),
+                    projectionMatrix: gl.getUniformLocation(this.program, 'uProjectionMatrix')
+                };
+
+                gl.enable(gl.DEPTH_TEST);
+                gl.enable(gl.BLEND);
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+            },
+
+            compileShader(gl, type, source) {
+                const shader = gl.createShader(type);
+                gl.shaderSource(shader, source);
+                gl.compileShader(shader);
+                if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                    console.error('Shader compile error:', gl.getShaderInfoLog(shader));
+                    gl.deleteShader(shader);
+                    return null;
+                }
+                return shader;
+            },
+
+            // Matrix math helpers
+            createPerspectiveMatrix(fov, aspect, near, far) {
+                const f = 1.0 / Math.tan(fov / 2);
+                return new Float32Array([
+                    f / aspect, 0, 0, 0,
+                    0, f, 0, 0,
+                    0, 0, (far + near) / (near - far), -1,
+                    0, 0, (2 * far * near) / (near - far), 0
+                ]);
+            },
+
+            createModelViewMatrix() {
+                const rx = this.rotateX * Math.PI / 180;
+                const ry = this.rotateY * Math.PI / 180;
+                const z = -3 / this.zoom;
+
+                // Rotation matrices
+                const cosX = Math.cos(rx), sinX = Math.sin(rx);
+                const cosY = Math.cos(ry), sinY = Math.sin(ry);
+
+                return new Float32Array([
+                    cosY, sinX * sinY, -cosX * sinY, 0,
+                    0, cosX, sinX, 0,
+                    sinY, -sinX * cosY, cosX * cosY, 0,
+                    0, 0, z, 1
+                ]);
+            },
+
+            render3D() {
+                if (!this.gl) return;
+
+                const gl = this.gl;
+                const canvas = this.canvas3D;
+
+                // Set canvas size
+                canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+                canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+
+                // Clear
+                gl.clearColor(0.1, 0.1, 0.1, 1.0);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                gl.useProgram(this.program);
+
+                // Generate mesh data
+                const { positions, colors, indices } = this.generateWavetableMesh();
+
+                // Position buffer
+                const positionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(this.attribLocations.position);
+                gl.vertexAttribPointer(this.attribLocations.position, 3, gl.FLOAT, false, 0, 0);
+
+                // Color buffer
+                const colorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(this.attribLocations.color);
+                gl.vertexAttribPointer(this.attribLocations.color, 3, gl.FLOAT, false, 0, 0);
+
+                // Index buffer
+                const indexBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+
+                // Set matrices
+                const projectionMatrix = this.createPerspectiveMatrix(
+                    45 * Math.PI / 180,
+                    canvas.width / canvas.height,
+                    0.1,
+                    100
+                );
+                const modelViewMatrix = this.createModelViewMatrix();
+
+                gl.uniformMatrix4fv(this.uniformLocations.projectionMatrix, false, projectionMatrix);
+                gl.uniformMatrix4fv(this.uniformLocations.modelViewMatrix, false, modelViewMatrix);
+
+                // Draw
+                gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_SHORT, 0);
+
+                // Draw wireframe on top
+                gl.depthFunc(gl.LEQUAL);
+                this.renderWireframe(gl, positions);
+
+                // Cleanup
+                gl.deleteBuffer(positionBuffer);
+                gl.deleteBuffer(colorBuffer);
+                gl.deleteBuffer(indexBuffer);
+            },
+
+            renderWireframe(gl, positions) {
+                // Create line mesh for wireframe effect
+                const linePositions = [];
+                const lineColors = [];
+                const samplesPerFrame = 64;
+                const numFrames = this.frames.length;
+
+                // Draw horizontal lines (waveforms)
+                for (let f = 0; f < numFrames; f++) {
+                    const frame = this.frames[f];
+                    const z = (f / (numFrames - 1)) * 2 - 1;
+                    const isCurrentFrame = f === this.currentFrame;
+
+                    for (let i = 0; i < samplesPerFrame - 1; i++) {
+                        const x1 = (i / (samplesPerFrame - 1)) * 2 - 1;
+                        const x2 = ((i + 1) / (samplesPerFrame - 1)) * 2 - 1;
+                        const sampleIdx1 = Math.floor((i / samplesPerFrame) * this.FRAME_SIZE);
+                        const sampleIdx2 = Math.floor(((i + 1) / samplesPerFrame) * this.FRAME_SIZE);
+                        const y1 = frame[sampleIdx1] * 0.5;
+                        const y2 = frame[sampleIdx2] * 0.5;
+
+                        linePositions.push(x1, y1, z, x2, y2, z);
+
+                        // Cyan for current frame, gradient for others
+                        if (isCurrentFrame) {
+                            lineColors.push(0, 1, 0.62, 0, 1, 0.62);
+                        } else {
+                            const brightness = 0.3 + (f / numFrames) * 0.4;
+                            lineColors.push(0, brightness, brightness * 0.62, 0, brightness, brightness * 0.62);
+                        }
+                    }
+                }
+
+                const lineBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(linePositions), gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(this.attribLocations.position);
+                gl.vertexAttribPointer(this.attribLocations.position, 3, gl.FLOAT, false, 0, 0);
+
+                const lineColorBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, lineColorBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(lineColors), gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(this.attribLocations.color);
+                gl.vertexAttribPointer(this.attribLocations.color, 3, gl.FLOAT, false, 0, 0);
+
+                gl.drawArrays(gl.LINES, 0, linePositions.length / 3);
+
+                gl.deleteBuffer(lineBuffer);
+                gl.deleteBuffer(lineColorBuffer);
+            },
+
+            generateWavetableMesh() {
+                const positions = [];
+                const colors = [];
+                const indices = [];
+
+                const samplesPerFrame = 64;
+                const numFrames = this.frames.length;
+
+                // Generate vertices
+                for (let f = 0; f < numFrames; f++) {
+                    const frame = this.frames[f];
+                    const z = (f / (numFrames - 1)) * 2 - 1;
+
+                    for (let i = 0; i < samplesPerFrame; i++) {
+                        const x = (i / (samplesPerFrame - 1)) * 2 - 1;
+                        const sampleIdx = Math.floor((i / samplesPerFrame) * this.FRAME_SIZE);
+                        const y = frame[sampleIdx] * 0.5;
+
+                        positions.push(x, y, z);
+
+                        // Color based on height and frame position
+                        const hue = (f / numFrames) * 0.3; // Cyan to green
+                        const brightness = 0.15 + Math.abs(y) * 0.3;
+                        colors.push(hue * 0.5, brightness + 0.2, brightness * 0.62 + 0.2);
+                    }
+                }
+
+                // Generate indices for triangles
+                for (let f = 0; f < numFrames - 1; f++) {
+                    for (let i = 0; i < samplesPerFrame - 1; i++) {
+                        const topLeft = f * samplesPerFrame + i;
+                        const topRight = topLeft + 1;
+                        const bottomLeft = (f + 1) * samplesPerFrame + i;
+                        const bottomRight = bottomLeft + 1;
+
+                        indices.push(topLeft, bottomLeft, topRight);
+                        indices.push(topRight, bottomLeft, bottomRight);
+                    }
+                }
+
+                return { positions, colors, indices };
+            },
+
+            render2D() {
+                const canvas = this.canvas2D;
+                const ctx = this.ctx2D;
+                const frame = this.frames[this.currentFrame];
+
+                canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+                canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+                ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+                const width = canvas.offsetWidth;
+                const height = canvas.offsetHeight;
+
+                // Background
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(0, 0, width, height);
+
+                // Grid
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                // Vertical lines
+                for (let i = 0; i <= 8; i++) {
+                    const x = (i / 8) * width;
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                }
+                // Horizontal lines
+                for (let i = 0; i <= 4; i++) {
+                    const y = (i / 4) * height;
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                }
+                ctx.stroke();
+
+                // Center line
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, height / 2);
+                ctx.lineTo(width, height / 2);
+                ctx.stroke();
+
+                // Waveform
+                ctx.strokeStyle = '#00ff9d';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                const samplesPerPixel = this.FRAME_SIZE / width;
+                for (let x = 0; x < width; x++) {
+                    const sampleIdx = Math.floor(x * samplesPerPixel);
+                    const y = height / 2 - frame[sampleIdx] * (height / 2 - 10);
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+
+                // Glow effect
+                ctx.strokeStyle = 'rgba(0, 255, 157, 0.3)';
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                for (let x = 0; x < width; x++) {
+                    const sampleIdx = Math.floor(x * samplesPerPixel);
+                    const y = height / 2 - frame[sampleIdx] * (height / 2 - 10);
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+            },
+
+            setupEventListeners() {
+                // 2D Canvas drawing
+                this.canvas2D.addEventListener('mousedown', (e) => this.startDraw(e));
+                this.canvas2D.addEventListener('mousemove', (e) => this.draw(e));
+                this.canvas2D.addEventListener('mouseup', () => this.endDraw());
+                this.canvas2D.addEventListener('mouseleave', () => this.endDraw());
+
+                // 3D Canvas rotation
+                this.canvas3D.addEventListener('mousedown', (e) => {
+                    this.isDragging3D = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                });
+                document.addEventListener('mousemove', (e) => {
+                    if (this.isDragging3D) {
+                        const deltaX = e.clientX - this.lastMouseX;
+                        const deltaY = e.clientY - this.lastMouseY;
+                        this.rotateY += deltaX * 0.5;
+                        this.rotateX += deltaY * 0.5;
+                        this.rotateX = Math.max(-90, Math.min(90, this.rotateX));
+                        this.lastMouseX = e.clientX;
+                        this.lastMouseY = e.clientY;
+                        document.getElementById('wt3dRotateX').value = this.rotateX;
+                        this.render3D();
+                    }
+                });
+                document.addEventListener('mouseup', () => {
+                    this.isDragging3D = false;
+                });
+
+                // 3D Controls
+                document.getElementById('wt3dRotateX').addEventListener('input', (e) => {
+                    this.rotateX = parseFloat(e.target.value);
+                    this.render3D();
+                });
+                document.getElementById('wt3dZoom').addEventListener('input', (e) => {
+                    this.zoom = parseFloat(e.target.value);
+                    this.render3D();
+                });
+
+                // Frame navigation
+                document.getElementById('prevFrame').addEventListener('click', () => {
+                    this.currentFrame = Math.max(0, this.currentFrame - 1);
+                    this.updateFrameDisplay();
+                });
+                document.getElementById('nextFrame').addEventListener('click', () => {
+                    this.currentFrame = Math.min(this.frames.length - 1, this.currentFrame + 1);
+                    this.updateFrameDisplay();
+                });
+                document.getElementById('addFrame').addEventListener('click', () => this.addFrame());
+                document.getElementById('deleteFrame').addEventListener('click', () => this.deleteFrame());
+
+                // Tools
+                document.querySelectorAll('.tool-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.currentTool = btn.id.replace('tool', '').toLowerCase();
+                        if (this.currentTool === 'smooth') this.smoothFrame();
+                        if (this.currentTool === 'normalize') this.normalizeFrame();
+                    });
+                });
+
+                // Preset waveforms
+                document.getElementById('presetWaveform').addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        this.loadPresetShape(e.target.value);
+                        e.target.value = '';
+                    }
+                });
+
+                // Wavetable presets
+                document.getElementById('wavetablePresets').addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        this.loadWavetablePreset(e.target.value);
+                        e.target.value = '';
+                    }
+                });
+
+                // Modal controls
+                document.getElementById('openWavetableEditor').addEventListener('click', () => this.open());
+                document.getElementById('closeWavetableEditor').addEventListener('click', () => this.close());
+                document.getElementById('applyWavetable').addEventListener('click', () => this.apply());
+            },
+
+            startDraw(e) {
+                this.isDrawing = true;
+                this.lastDrawPoint = this.getCanvasPoint(e);
+                this.drawAt(this.lastDrawPoint);
+            },
+
+            draw(e) {
+                if (!this.isDrawing) return;
+                const point = this.getCanvasPoint(e);
+
+                if (this.currentTool === 'draw') {
+                    // Interpolate between last point and current for smooth lines
+                    if (this.lastDrawPoint) {
+                        this.drawLine(this.lastDrawPoint, point);
+                    }
+                    this.lastDrawPoint = point;
+                } else if (this.currentTool === 'line') {
+                    // Preview line
+                    this.render2D();
+                    const ctx = this.ctx2D;
+                    ctx.strokeStyle = 'rgba(0, 255, 157, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    const height = this.canvas2D.offsetHeight;
+                    const startY = height / 2 - this.lastDrawPoint.value * (height / 2 - 10);
+                    const endY = height / 2 - point.value * (height / 2 - 10);
+                    ctx.moveTo(this.lastDrawPoint.x * this.canvas2D.offsetWidth, startY);
+                    ctx.lineTo(point.x * this.canvas2D.offsetWidth, endY);
+                    ctx.stroke();
+                }
+            },
+
+            endDraw() {
+                if (this.isDrawing && this.currentTool === 'line' && this.lastDrawPoint) {
+                    const point = this.lastDrawPoint;
+                    // Line tool - draw the final line
+                }
+                this.isDrawing = false;
+                this.lastDrawPoint = null;
+                this.render2D();
+                this.render3D();
+            },
+
+            getCanvasPoint(e) {
+                const rect = this.canvas2D.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width;
+                const y = (e.clientY - rect.top) / rect.height;
+                const value = 1 - y * 2; // Map to -1 to 1
+                return { x: Math.max(0, Math.min(1, x)), value: Math.max(-1, Math.min(1, value)) };
+            },
+
+            drawAt(point) {
+                const frame = this.frames[this.currentFrame];
+                const sampleIdx = Math.floor(point.x * this.FRAME_SIZE);
+                const brushSize = 20;
+
+                for (let i = -brushSize; i <= brushSize; i++) {
+                    const idx = sampleIdx + i;
+                    if (idx >= 0 && idx < this.FRAME_SIZE) {
+                        const distance = Math.abs(i) / brushSize;
+                        const influence = 1 - distance * distance;
+                        frame[idx] = frame[idx] * (1 - influence) + point.value * influence;
+                    }
+                }
+                this.render2D();
+            },
+
+            drawLine(start, end) {
+                const frame = this.frames[this.currentFrame];
+                const startIdx = Math.floor(start.x * this.FRAME_SIZE);
+                const endIdx = Math.floor(end.x * this.FRAME_SIZE);
+                const steps = Math.abs(endIdx - startIdx) + 1;
+
+                for (let i = 0; i < steps; i++) {
+                    const t = steps === 1 ? 0 : i / (steps - 1);
+                    const idx = Math.round(startIdx + (endIdx - startIdx) * t);
+                    const value = start.value + (end.value - start.value) * t;
+
+                    if (idx >= 0 && idx < this.FRAME_SIZE) {
+                        frame[idx] = value;
+                    }
+                }
+                this.render2D();
+            },
+
+            smoothFrame() {
+                const frame = this.frames[this.currentFrame];
+                const smoothed = new Float32Array(this.FRAME_SIZE);
+                const windowSize = 5;
+
+                for (let i = 0; i < this.FRAME_SIZE; i++) {
+                    let sum = 0;
+                    let count = 0;
+                    for (let j = -windowSize; j <= windowSize; j++) {
+                        const idx = (i + j + this.FRAME_SIZE) % this.FRAME_SIZE;
+                        sum += frame[idx];
+                        count++;
+                    }
+                    smoothed[i] = sum / count;
+                }
+
+                this.frames[this.currentFrame] = smoothed;
+                this.render2D();
+                this.render3D();
+            },
+
+            normalizeFrame() {
+                const frame = this.frames[this.currentFrame];
+                let max = 0;
+                for (let i = 0; i < this.FRAME_SIZE; i++) {
+                    max = Math.max(max, Math.abs(frame[i]));
+                }
+                if (max > 0) {
+                    for (let i = 0; i < this.FRAME_SIZE; i++) {
+                        frame[i] /= max;
+                    }
+                }
+                this.render2D();
+                this.render3D();
+            },
+
+            addFrame() {
+                if (this.frames.length >= 64) return;
+                const newFrame = new Float32Array(this.FRAME_SIZE);
+                // Copy current frame
+                newFrame.set(this.frames[this.currentFrame]);
+                this.frames.splice(this.currentFrame + 1, 0, newFrame);
+                this.currentFrame++;
+                this.updateFrameDisplay();
+            },
+
+            deleteFrame() {
+                if (this.frames.length <= 1) return;
+                this.frames.splice(this.currentFrame, 1);
+                this.currentFrame = Math.min(this.currentFrame, this.frames.length - 1);
+                this.updateFrameDisplay();
+            },
+
+            updateFrameDisplay() {
+                document.getElementById('currentFrameNum').textContent = this.currentFrame + 1;
+                document.getElementById('totalFrames').textContent = this.frames.length;
+                this.render2D();
+                this.render3D();
+            },
+
+            loadPresetShape(type) {
+                const frame = this.frames[this.currentFrame];
+                for (let i = 0; i < this.FRAME_SIZE; i++) {
+                    const phase = (i / this.FRAME_SIZE) * Math.PI * 2;
+                    const t = i / this.FRAME_SIZE;
+
+                    switch (type) {
+                        case 'sine':
+                            frame[i] = Math.sin(phase);
+                            break;
+                        case 'triangle':
+                            frame[i] = 2 * Math.abs(2 * t - 1) - 1;
+                            break;
+                        case 'sawtooth':
+                            frame[i] = 2 * t - 1;
+                            break;
+                        case 'square':
+                            frame[i] = t < 0.5 ? 1 : -1;
+                            break;
+                        case 'pulse25':
+                            frame[i] = t < 0.25 ? 1 : -1;
+                            break;
+                        case 'pulse10':
+                            frame[i] = t < 0.1 ? 1 : -1;
+                            break;
+                        case 'random':
+                            frame[i] = Math.random() * 2 - 1;
+                            break;
+                        case 'clear':
+                            frame[i] = 0;
+                            break;
+                    }
+                }
+                this.render2D();
+                this.render3D();
+            },
+
+            loadWavetablePreset(type) {
+                this.frames = [];
+                const numFrames = 8;
+
+                for (let f = 0; f < numFrames; f++) {
+                    const frame = new Float32Array(this.FRAME_SIZE);
+                    const morph = f / (numFrames - 1);
+
+                    for (let i = 0; i < this.FRAME_SIZE; i++) {
+                        const phase = (i / this.FRAME_SIZE) * Math.PI * 2;
+                        const t = i / this.FRAME_SIZE;
+
+                        switch (type) {
+                            case 'basic':
+                                // Sine -> Triangle -> Saw -> Square
+                                const sine = Math.sin(phase);
+                                const tri = 2 * Math.abs(2 * t - 1) - 1;
+                                const saw = 2 * t - 1;
+                                const square = t < 0.5 ? 1 : -1;
+                                if (morph < 0.33) {
+                                    const m = morph / 0.33;
+                                    frame[i] = sine * (1 - m) + tri * m;
+                                } else if (morph < 0.66) {
+                                    const m = (morph - 0.33) / 0.33;
+                                    frame[i] = tri * (1 - m) + saw * m;
+                                } else {
+                                    const m = (morph - 0.66) / 0.34;
+                                    frame[i] = saw * (1 - m) + square * m;
+                                }
+                                break;
+
+                            case 'pwm':
+                                // Pulse width modulation
+                                const pw = 0.1 + morph * 0.4;
+                                frame[i] = t < pw ? 1 : -1;
+                                break;
+
+                            case 'formant':
+                                // Formant-like harmonics
+                                const fundamental = Math.sin(phase);
+                                const h2 = Math.sin(phase * 2) * (0.5 - morph * 0.4);
+                                const h3 = Math.sin(phase * 3) * (0.3 + morph * 0.4);
+                                const h4 = Math.sin(phase * 4) * morph * 0.3;
+                                const h5 = Math.sin(phase * 5) * morph * 0.2;
+                                frame[i] = (fundamental + h2 + h3 + h4 + h5) / 2;
+                                break;
+
+                            case 'digital':
+                                // Bit-crushed / digital
+                                const bits = 2 + Math.floor(morph * 6);
+                                const levels = Math.pow(2, bits);
+                                const rawSaw = 2 * t - 1;
+                                frame[i] = Math.round(rawSaw * levels) / levels;
+                                break;
+
+                            case 'analog':
+                                // Soft saturation / analog warmth
+                                const rawVal = Math.sin(phase) + Math.sin(phase * 2) * 0.5 * morph;
+                                const drive = 1 + morph * 3;
+                                frame[i] = Math.tanh(rawVal * drive) / Math.tanh(drive);
+                                break;
+
+                            case 'vocal':
+                                // Vowel-like formants
+                                const f1 = Math.sin(phase);
+                                const f2 = Math.sin(phase * (2 + morph * 2)) * 0.5;
+                                const f3 = Math.sin(phase * (4 + morph * 4)) * 0.25;
+                                frame[i] = (f1 + f2 + f3) / 1.75;
+                                break;
+                        }
+                    }
+                    this.frames.push(frame);
+                }
+
+                this.currentFrame = 0;
+                this.updateFrameDisplay();
+            },
+
+            open() {
+                document.getElementById('wavetableModal').style.display = 'flex';
+                setTimeout(() => {
+                    this.render2D();
+                    this.render3D();
+                }, 50);
+            },
+
+            close() {
+                document.getElementById('wavetableModal').style.display = 'none';
+            },
+
+            apply() {
+                // Copy frames to synth state
+                SynthState.wavetable.frames = this.frames.map(f => new Float32Array(f));
+
+                // Create PeriodicWave for current position
+                this.updatePeriodicWave();
+
+                this.close();
+            },
+
+            updatePeriodicWave() {
+                if (!Synth.audioContext || this.frames.length === 0) return;
+
+                const position = SynthState.wavetable.position;
+                const frameIdx = position * (this.frames.length - 1);
+                const lowerIdx = Math.floor(frameIdx);
+                const upperIdx = Math.min(lowerIdx + 1, this.frames.length - 1);
+                const blend = frameIdx - lowerIdx;
+
+                // Interpolate between frames
+                const interpolated = new Float32Array(this.FRAME_SIZE);
+                for (let i = 0; i < this.FRAME_SIZE; i++) {
+                    interpolated[i] = this.frames[lowerIdx][i] * (1 - blend) + this.frames[upperIdx][i] * blend;
+                }
+
+                // FFT to get harmonics for PeriodicWave
+                const real = new Float32Array(this.FRAME_SIZE / 2);
+                const imag = new Float32Array(this.FRAME_SIZE / 2);
+
+                // Simple DFT for harmonics (first 256 harmonics)
+                const numHarmonics = Math.min(256, this.FRAME_SIZE / 2);
+                for (let k = 0; k < numHarmonics; k++) {
+                    let realSum = 0, imagSum = 0;
+                    for (let n = 0; n < this.FRAME_SIZE; n++) {
+                        const angle = -2 * Math.PI * k * n / this.FRAME_SIZE;
+                        realSum += interpolated[n] * Math.cos(angle);
+                        imagSum += interpolated[n] * Math.sin(angle);
+                    }
+                    real[k] = realSum / this.FRAME_SIZE;
+                    imag[k] = imagSum / this.FRAME_SIZE;
+                }
+
+                real[0] = 0; // Remove DC offset
+
+                try {
+                    SynthState.wavetable.periodicWave = Synth.audioContext.createPeriodicWave(real, imag, { disableNormalization: false });
+                } catch (e) {
+                    console.error('Failed to create PeriodicWave:', e);
+                }
+            },
+
+            getInterpolatedFrame(position) {
+                if (this.frames.length === 0) return null;
+
+                const frameIdx = position * (this.frames.length - 1);
+                const lowerIdx = Math.floor(frameIdx);
+                const upperIdx = Math.min(lowerIdx + 1, this.frames.length - 1);
+                const blend = frameIdx - lowerIdx;
+
+                const interpolated = new Float32Array(this.FRAME_SIZE);
+                for (let i = 0; i < this.FRAME_SIZE; i++) {
+                    interpolated[i] = this.frames[lowerIdx][i] * (1 - blend) + this.frames[upperIdx][i] * blend;
+                }
+                return interpolated;
+            }
         };
 
         // Utility functions
@@ -543,6 +1457,395 @@
                 }
                 return buffer;
             },
+            formatValue(value, unit, format) {
+                const num = parseFloat(value);
+                if (format === 'freq') {
+                    // Convert linear slider value to logarithmic frequency for display
+                    const minFreq = 20, maxFreq = 20000;
+                    const normalized = (num - minFreq) / (maxFreq - minFreq);
+                    const freq = minFreq * Math.pow(maxFreq / minFreq, normalized);
+                    if (freq >= 1000) return (freq / 1000).toFixed(1) + 'kHz';
+                    return Math.round(freq) + 'Hz';
+                }
+                if (format === 'time') {
+                    if (num < 1) return Math.round(num * 1000) + 'ms';
+                    return num.toFixed(2) + 's';
+                }
+                if (unit === '%') {
+                    return Math.round(num * 100) + '%';
+                }
+                if (unit === 'x') {
+                    return Math.round(num) + 'x';
+                }
+                if (unit === 'ct') {
+                    return Math.round(num) + 'ct';
+                }
+                if (unit === 'Hz') {
+                    return num.toFixed(1) + 'Hz';
+                }
+                // Default: show number with appropriate precision
+                if (Number.isInteger(num)) return num.toString() + unit;
+                return num.toFixed(1) + unit;
+            }
+        };
+
+        // Preset Manager
+        const PresetManager = {
+            STORAGE_KEY: 'browsynth_presets',
+
+            getPresets() {
+                try {
+                    const stored = localStorage.getItem(this.STORAGE_KEY);
+                    return stored ? JSON.parse(stored) : {};
+                } catch (e) {
+                    console.error('Error loading presets:', e);
+                    return {};
+                }
+            },
+
+            savePreset(name, settings) {
+                const presets = this.getPresets();
+                presets[name] = settings;
+                try {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(presets));
+                    return true;
+                } catch (e) {
+                    console.error('Error saving preset:', e);
+                    return false;
+                }
+            },
+
+            deletePreset(name) {
+                const presets = this.getPresets();
+                delete presets[name];
+                try {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(presets));
+                    return true;
+                } catch (e) {
+                    console.error('Error deleting preset:', e);
+                    return false;
+                }
+            },
+
+            loadPreset(name) {
+                const presets = this.getPresets();
+                return presets[name] || null;
+            },
+
+            updatePresetSelect() {
+                const select = document.getElementById('presetSelect');
+                if (!select) return;
+
+                // Clear existing options except the first one
+                while (select.options.length > 1) {
+                    select.remove(1);
+                }
+
+                // Add factory presets
+                const factoryPresets = this.getFactoryPresets();
+                if (Object.keys(factoryPresets).length > 0) {
+                    const factoryGroup = document.createElement('optgroup');
+                    factoryGroup.label = 'Factory';
+                    Object.keys(factoryPresets).forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = 'factory:' + name;
+                        option.textContent = name;
+                        factoryGroup.appendChild(option);
+                    });
+                    select.appendChild(factoryGroup);
+                }
+
+                // Add user presets
+                const userPresets = this.getPresets();
+                if (Object.keys(userPresets).length > 0) {
+                    const userGroup = document.createElement('optgroup');
+                    userGroup.label = 'User';
+                    Object.keys(userPresets).sort().forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = 'user:' + name;
+                        option.textContent = name;
+                        userGroup.appendChild(option);
+                    });
+                    select.appendChild(userGroup);
+                }
+            },
+
+            getFactoryPresets() {
+                return {
+                    'Init': {
+                        synthMode: 'waveform', waveform: 'sine', unison: '1', detune: '0',
+                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        filterCutoff: '20000', filterResonance: '0', filterEnvAmount: '0',
+                        attack: '0.05', decay: '0.1', sustain: '0.5', release: '0.5',
+                        lfoToggle: false, lfoRate: '0', lfoAmount: '50',
+                        noiseToggle: false, noiseAmount: '0',
+                        masterVolume: '0.7', masterReverb: '0', masterDelay: '0',
+                        masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '0'
+                    },
+                    'Warm Pad': {
+                        synthMode: 'waveform', waveform: 'sawtooth', unison: '4', detune: '25',
+                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        filterCutoff: '2000', filterResonance: '2', filterEnvAmount: '0.3',
+                        attack: '0.8', decay: '0.5', sustain: '0.7', release: '1.5',
+                        lfoToggle: true, lfoRate: '0.5', lfoAmount: '200',
+                        noiseToggle: false, noiseAmount: '0',
+                        masterVolume: '0.6', masterReverb: '0.4', masterDelay: '0.2',
+                        masterLowEQ: '2', masterMidEQ: '0', masterHighEQ: '-2'
+                    },
+                    'Bright Lead': {
+                        synthMode: 'waveform', waveform: 'square', unison: '2', detune: '10',
+                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        filterCutoff: '8000', filterResonance: '5', filterEnvAmount: '0.5',
+                        attack: '0.01', decay: '0.2', sustain: '0.6', release: '0.3',
+                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
+                        noiseToggle: false, noiseAmount: '0',
+                        masterVolume: '0.5', masterReverb: '0.1', masterDelay: '0.15',
+                        masterLowEQ: '0', masterMidEQ: '3', masterHighEQ: '2'
+                    },
+                    'Deep Bass': {
+                        synthMode: 'waveform', waveform: 'sawtooth', unison: '1', detune: '0',
+                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        filterCutoff: '500', filterResonance: '8', filterEnvAmount: '0.6',
+                        attack: '0.01', decay: '0.3', sustain: '0.4', release: '0.2',
+                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
+                        noiseToggle: false, noiseAmount: '0',
+                        masterVolume: '0.7', masterReverb: '0', masterDelay: '0',
+                        masterLowEQ: '6', masterMidEQ: '-2', masterHighEQ: '-4'
+                    },
+                    'Pluck': {
+                        synthMode: 'waveform', waveform: 'triangle', unison: '2', detune: '5',
+                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        filterCutoff: '5000', filterResonance: '3', filterEnvAmount: '0.8',
+                        attack: '0.001', decay: '0.4', sustain: '0', release: '0.3',
+                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
+                        noiseToggle: false, noiseAmount: '0',
+                        masterVolume: '0.6', masterReverb: '0.25', masterDelay: '0.3',
+                        masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '0'
+                    },
+                    'FM Bell': {
+                        synthMode: 'waveform', waveform: 'sine', unison: '1', detune: '0',
+                        fmToggle: true, fmAmount: '400', filterToggle: true, filterType: 'lowpass',
+                        filterCutoff: '10000', filterResonance: '0', filterEnvAmount: '0',
+                        attack: '0.001', decay: '1.5', sustain: '0', release: '2',
+                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
+                        noiseToggle: false, noiseAmount: '0',
+                        masterVolume: '0.5', masterReverb: '0.5', masterDelay: '0.2',
+                        masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '4'
+                    },
+                    'Noise Sweep': {
+                        synthMode: 'waveform', waveform: 'sawtooth', unison: '3', detune: '30',
+                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        filterCutoff: '1000', filterResonance: '10', filterEnvAmount: '0.7',
+                        attack: '0.5', decay: '1', sustain: '0.5', release: '1',
+                        lfoToggle: true, lfoRate: '2', lfoAmount: '500',
+                        noiseToggle: true, noiseAmount: '0.15',
+                        masterVolume: '0.5', masterReverb: '0.6', masterDelay: '0.4',
+                        masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '0'
+                    }
+                };
+            },
+
+            getCurrentSettings() {
+                const settings = {};
+                const controlIds = [
+                    'synthMode', 'waveform', 'unison', 'detune', 'fmAmount',
+                    'filterType', 'filterCutoff', 'filterResonance', 'filterEnvAmount',
+                    'attack', 'decay', 'sustain', 'release',
+                    'lfoRate', 'lfoAmount', 'noiseAmount',
+                    'masterVolume', 'masterReverb', 'masterDelay',
+                    'masterLowEQ', 'masterMidEQ', 'masterHighEQ'
+                ];
+                const checkboxIds = ['fmToggle', 'filterToggle', 'lfoToggle', 'noiseToggle'];
+
+                controlIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) settings[id] = el.value;
+                });
+
+                checkboxIds.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) settings[id] = el.checked;
+                });
+
+                return settings;
+            },
+
+            applySettings(settings) {
+                if (!settings) return;
+
+                Object.entries(settings).forEach(([key, value]) => {
+                    const el = document.getElementById(key);
+                    if (!el) return;
+
+                    if (el.type === 'checkbox') {
+                        el.checked = value;
+                        el.dispatchEvent(new Event('change'));
+                    } else {
+                        el.value = value;
+                        el.dispatchEvent(new Event('input'));
+                    }
+                });
+
+                // Update all knob displays
+                if (typeof UI !== 'undefined' && UI.updateCircularControls) {
+                    UI.updateCircularControls();
+                }
+            }
+        };
+
+        // MIDI Handler
+        const MIDIHandler = {
+            midiAccess: null,
+            inputs: [],
+            enabled: false,
+
+            async init() {
+                if (this.enabled) return true; // Already initialized
+
+                if (!navigator.requestMIDIAccess) {
+                    console.log('Web MIDI API not supported');
+                    this.updateButton('unsupported');
+                    return false;
+                }
+
+                try {
+                    this.midiAccess = await navigator.requestMIDIAccess();
+                    this.midiAccess.onstatechange = (e) => this.onStateChange(e);
+                    this.connectInputs();
+                    this.enabled = true;
+                    return true;
+                } catch (err) {
+                    console.error('MIDI access denied:', err);
+                    this.updateButton('denied');
+                    return false;
+                }
+            },
+
+            connectInputs() {
+                this.inputs = [];
+                for (const input of this.midiAccess.inputs.values()) {
+                    input.onmidimessage = (e) => this.onMessage(e);
+                    this.inputs.push(input);
+                    console.log('MIDI input connected:', input.name);
+                }
+                this.updateButton(this.inputs.length > 0 ? 'connected' : 'disconnected');
+            },
+
+            onStateChange(e) {
+                console.log('MIDI state change:', e.port.name, e.port.state);
+                this.connectInputs();
+            },
+
+            onMessage(e) {
+                const [status, note, velocity] = e.data;
+                const command = status >> 4;
+                const channel = status & 0xf;
+
+                // Note On
+                if (command === 9 && velocity > 0) {
+                    const noteName = this.midiNoteToName(note);
+                    if (noteName) Voice.play(noteName);
+                }
+                // Note Off (or Note On with velocity 0)
+                else if (command === 8 || (command === 9 && velocity === 0)) {
+                    const noteName = this.midiNoteToName(note);
+                    if (noteName) Voice.release(noteName);
+                }
+                // Pitch Bend
+                else if (command === 14) {
+                    const bend = ((velocity << 7) | note) / 8192 - 1; // -1 to 1
+                    if (SynthState.controls.pitchBendWheel) {
+                        SynthState.controls.pitchBendWheel.value = bend;
+                        Synth.updatePitchBend(bend);
+                    }
+                }
+                // Control Change
+                else if (command === 11) {
+                    this.handleCC(note, velocity);
+                }
+            },
+
+            handleCC(cc, value) {
+                const normalized = value / 127;
+
+                // Common CC mappings
+                const minFreq = 20, maxFreq = 20000;
+                switch (cc) {
+                    case 1: // Mod wheel -> Filter cutoff
+                        if (SynthState.controls.filterCutoff) {
+                            // Map normalized MIDI to slider range (slider is linear, conversion happens in updateParams)
+                            const sliderValue = minFreq + normalized * (maxFreq - minFreq);
+                            SynthState.controls.filterCutoff.value = sliderValue;
+                            Synth.updateParams('filterCutoff');
+                        }
+                        break;
+                    case 7: // Volume
+                        if (SynthState.controls.masterVolume) {
+                            SynthState.controls.masterVolume.value = normalized;
+                            Synth.updateParams('masterVolume');
+                        }
+                        break;
+                    case 74: // Filter cutoff (common mapping)
+                        if (SynthState.controls.filterCutoff) {
+                            const sliderValue = minFreq + normalized * (maxFreq - minFreq);
+                            SynthState.controls.filterCutoff.value = sliderValue;
+                            Synth.updateParams('filterCutoff');
+                        }
+                        break;
+                    case 71: // Resonance
+                        if (SynthState.controls.filterResonance) {
+                            SynthState.controls.filterResonance.value = normalized * 20;
+                            Synth.updateParams('filterResonance');
+                        }
+                        break;
+                    case 91: // Reverb
+                        if (SynthState.controls.masterReverb) {
+                            SynthState.controls.masterReverb.value = normalized;
+                            Synth.updateParams('masterReverb');
+                        }
+                        break;
+                }
+
+                // Update UI
+                UI.updateCircularControls();
+            },
+
+            midiNoteToName(midiNote) {
+                const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                const octave = Math.floor(midiNote / 12) - 1;
+                const note = notes[midiNote % 12];
+                return note + octave;
+            },
+
+            updateButton(status) {
+                const btn = document.getElementById('midiEnableButton');
+                if (!btn) return;
+
+                // Remove all status classes
+                btn.classList.remove('midi-connected', 'midi-disconnected', 'midi-denied', 'midi-unsupported');
+
+                switch (status) {
+                    case 'connected':
+                        btn.classList.add('midi-connected');
+                        btn.title = 'MIDI Connected: ' + this.inputs.map(i => i.name).join(', ');
+                        break;
+                    case 'disconnected':
+                        btn.classList.add('midi-disconnected');
+                        btn.title = 'MIDI enabled - No devices connected';
+                        break;
+                    case 'denied':
+                        btn.classList.add('midi-denied');
+                        btn.title = 'MIDI access denied - Click to retry';
+                        break;
+                    case 'unsupported':
+                        btn.classList.add('midi-unsupported');
+                        btn.title = 'Web MIDI not supported in this browser';
+                        btn.disabled = true;
+                        break;
+                    default:
+                        btn.title = 'Click to enable MIDI input';
+                }
+            }
         };
 
         // Synth voice creation and management
@@ -561,10 +1864,15 @@
                 const oscillators = [];
                 const unisonCount = parseInt(SynthState.controls.unison.value) || 1;
                 const detune = parseFloat(SynthState.controls.detune.value) || 0;
+                const isWavetable = synthMode === 'wavetable' && SynthState.wavetable.periodicWave;
 
                 for (let i = 0; i < unisonCount; i++) {
                     const osc = Synth.audioContext.createOscillator();
-                    osc.type = SynthState.controls.waveform.value;
+                    if (isWavetable) {
+                        osc.setPeriodicWave(SynthState.wavetable.periodicWave);
+                    } else {
+                        osc.type = SynthState.controls.waveform.value;
+                    }
                     osc.frequency.setValueAtTime(frequency, now);
                     const detuneAmount = unisonCount > 1 ? (i / (unisonCount - 1) - 0.5) * detune : 0;
                     osc.detune.setValueAtTime(detuneAmount, now);
@@ -1149,6 +2457,14 @@
                     const normalizedValue = (value - min) / (max - min);
                     const rotation = normalizedValue * 270 - 135; // Map 0-1 to -135deg to 135deg
                     input.parentNode.style.setProperty('--rotation', `${rotation}deg`);
+
+                    // Update value display
+                    const valueSpan = input.parentNode.querySelector('.knob-value');
+                    if (valueSpan) {
+                        const unit = input.parentNode.dataset.unit || '';
+                        const format = input.parentNode.dataset.format || '';
+                        valueSpan.textContent = Util.formatValue(value, unit, format);
+                    }
                 });
             },
 
@@ -1236,7 +2552,8 @@
 
                 // Control event listeners
                 Object.entries(SynthState.controls).forEach(([key, control]) => {
-                    if (control.type === 'checkbox') {
+                    if (!control || !control.addEventListener) return;
+                    if (control.type === 'checkbox' || control.tagName === 'SELECT') {
                         control.addEventListener('change', () => Synth.updateParams(key));
                     } else {
                         control.addEventListener('input', () => Synth.updateParams(key));
@@ -1361,6 +2678,60 @@
 
                 const toggleVisualizerButton = document.getElementById('toggleVisualizer');
                 toggleVisualizerButton.addEventListener('click', () => Synth.toggleVisualizer());
+
+                // Initialize Preset controls
+                PresetManager.updatePresetSelect();
+
+                document.getElementById('presetSelect').addEventListener('change', (e) => {
+                    const value = e.target.value;
+                    if (!value) return;
+
+                    const [type, name] = value.split(':');
+                    let settings;
+
+                    if (type === 'factory') {
+                        settings = PresetManager.getFactoryPresets()[name];
+                    } else {
+                        settings = PresetManager.loadPreset(name);
+                    }
+
+                    if (settings) {
+                        PresetManager.applySettings(settings);
+                    }
+                });
+
+                document.getElementById('savePresetButton').addEventListener('click', () => {
+                    const name = prompt('Enter preset name:');
+                    if (name && name.trim()) {
+                        const settings = PresetManager.getCurrentSettings();
+                        if (PresetManager.savePreset(name.trim(), settings)) {
+                            PresetManager.updatePresetSelect();
+                            document.getElementById('presetSelect').value = 'user:' + name.trim();
+                        }
+                    }
+                });
+
+                document.getElementById('deletePresetButton').addEventListener('click', () => {
+                    const select = document.getElementById('presetSelect');
+                    const value = select.value;
+
+                    if (!value || !value.startsWith('user:')) {
+                        alert('Please select a user preset to delete');
+                        return;
+                    }
+
+                    const name = value.replace('user:', '');
+                    if (confirm(`Delete preset "${name}"?`)) {
+                        PresetManager.deletePreset(name);
+                        PresetManager.updatePresetSelect();
+                    }
+                });
+
+                // MIDI enable button (opt-in, no auto-request)
+                document.getElementById('midiEnableButton').addEventListener('click', () => {
+                    MIDIHandler.init();
+                });
+
                 // Add tuning preset handler
                 SynthState.controls.tuningPreset.addEventListener('change', async (e) => {
                     const selectedTuning = e.target.value;
@@ -1710,6 +3081,30 @@
                 this.updateVisualizer();
                 this.updateParams();
 
+                // Initialize Wavetable Editor
+                WavetableEditor.init();
+                WavetableEditor.apply(); // Apply default wavetable
+
+                // Synth mode change handler - show/hide wavetable controls
+                SynthState.controls.synthMode.addEventListener('change', (e) => {
+                    const mode = e.target.value;
+                    document.getElementById('waveformControl').style.display = mode === 'waveform' ? 'block' : 'none';
+                    document.getElementById('wavetableControls').style.display = mode === 'wavetable' ? 'block' : 'none';
+                });
+
+                // Wavetable position change handler
+                const wavetablePositionControl = document.getElementById('wavetablePosition');
+                if (wavetablePositionControl) {
+                    wavetablePositionControl.addEventListener('input', (e) => {
+                        SynthState.wavetable.position = parseFloat(e.target.value);
+                        WavetableEditor.updatePeriodicWave();
+                        // Update active voices with new wavetable
+                        Object.values(SynthState.activeVoices).forEach(voice => {
+                            if (voice.updateVoice) voice.updateVoice();
+                        });
+                    });
+                }
+
                 console.log('Synth initialization complete');
             },
             initAudioContext() {
@@ -1898,11 +3293,18 @@
                 }
 
                 SynthState.filterSettings.type = SynthState.controls.filterType.value;
-                SynthState.filterSettings.frequency = parseFloat(SynthState.controls.filterCutoff.value);
+                // Use logarithmic scale for filter cutoff (more musical control)
+                const cutoffValue = parseFloat(SynthState.controls.filterCutoff.value);
+                const minFreq = 20, maxFreq = 20000;
+                // Convert linear slider to logarithmic frequency
+                const normalizedCutoff = (cutoffValue - minFreq) / (maxFreq - minFreq);
+                SynthState.filterSettings.frequency = minFreq * Math.pow(maxFreq / minFreq, normalizedCutoff);
                 SynthState.filterSettings.Q = parseFloat(SynthState.controls.filterResonance.value);
                 SynthState.fmEnabled = SynthState.controls.fmToggle.checked;
 
-                Object.values(SynthState.activeVoices).forEach(voice => voice.updateVoice());
+                Object.values(SynthState.activeVoices).forEach(voice => {
+                    if (voice.updateVoice) voice.updateVoice();
+                });
 
                 UI.updateCircularControls();
             },
