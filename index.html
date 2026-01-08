@@ -416,12 +416,7 @@
                 rel="noopener noreferrer">hypertrance</a> ❤️</p>
     </div>
     <script>
-        let audioContext;
-        let masterGainNode;
-        let compressor;
-        let analyser;
         let loadedTuningContent = null;
-        let loadedFileName = null;
 
         // Synth configuration object
         const SynthConfig = {
@@ -504,7 +499,6 @@
                 console.log('Parsing tuning file...');
                 const lines = content.split('\n');
                 const frequencies = new Array(128).fill(null);
-                let inExactSection = false;
 
                 // Reference C4 = 261.63 Hz (MIDI note 60)
                 const MIDDLE_C = 261.63;
@@ -519,18 +513,10 @@
 
                 const STEP_RATIO = Math.pow(OCTAVE_RATIO, 1 / STEPS_PER_OCTAVE);
 
-                // Find the base frequency (C4) in the tuning file
                 const c4Index = 60;  // MIDI note number for C4
-                const c4FreqInFile = 6000;  // The frequency for C4 in your tuning file
 
                 lines.forEach((line, index) => {
                     line = line.trim();
-
-                    if (line === '[Exact Tuning]') {
-                        console.log('Found Exact Tuning section at line', index);
-                        inExactSection = true;
-                        return;
-                    }
 
                     if (line.startsWith('note ')) {
                         const parts = line.split('=');
@@ -1448,9 +1434,9 @@
                 return TuningSystem.noteToFreq(note);
             },
             createNoiseBuffer() {
-                if (!audioContext) return null;
-                const bufferSize = audioContext.sampleRate;
-                const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+                if (!Synth.audioContext) return null;
+                const bufferSize = Synth.audioContext.sampleRate;
+                const buffer = Synth.audioContext.createBuffer(1, bufferSize, Synth.audioContext.sampleRate);
                 const output = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) {
                     output[i] = Math.random() * 2 - 1;
@@ -1739,7 +1725,6 @@
             onMessage(e) {
                 const [status, note, velocity] = e.data;
                 const command = status >> 4;
-                const channel = status & 0xf;
 
                 // Note On
                 if (command === 9 && velocity > 0) {
@@ -2619,8 +2604,7 @@
                 // Keyboard controls
                 document.addEventListener('keydown', (event) => {
                     let key = event.key.toLowerCase();
-                    let originalKey = key;
-                    let location = event.location;
+                    const location = event.location;
 
                     // Handle numpad keys
                     if (location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD) {
@@ -2645,8 +2629,7 @@
 
                 document.addEventListener('keyup', (event) => {
                     let key = event.key.toLowerCase();
-                    let originalKey = key;
-                    let location = event.location;
+                    const location = event.location;
 
                     // Handle numpad keys
                     if (location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD) {
