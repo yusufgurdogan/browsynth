@@ -2580,7 +2580,10 @@
                 SynthState.controls.filterToggle.addEventListener('change', () => Synth.updateParams('filterToggle'));
                 SynthState.controls.arpSpeed.addEventListener('input', Arpeggiator.updateSpeed);
                 SynthState.controls.arpClock.addEventListener('change', Arpeggiator.updateSpeed);
-                SynthState.controls.arpPattern.addEventListener('change', Arpeggiator.updateSpeed);
+                SynthState.controls.arpPattern.addEventListener('change', () => {
+                    SynthState.arpeggiator.pattern = SynthState.controls.arpPattern.value;
+                    Arpeggiator.updateSpeed();
+                });
                 SynthState.controls.noiseToggle.addEventListener('change', () => Synth.updateParams('noiseToggle'));
                 SynthState.controls.noiseAmount.addEventListener('input', () => Synth.updateParams('noiseAmount'));
                 SynthState.controls.lfoToggle.addEventListener('change', () => Synth.updateParams('lfoToggle'));
