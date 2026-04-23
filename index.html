@@ -392,6 +392,14 @@
                     <label for="whiteKeysOnlyToggle">White Keys Only</label>
                     <input type="checkbox" id="whiteKeysOnlyToggle">
                 </div>
+                <div class="control">
+                    <label for="octaveShift">Octave Shift</label>
+                    <select id="octaveShift">
+                        <option value="-1">-1</option>
+                        <option value="0" selected>0</option>
+                        <option value="1">+1</option>
+                    </select>
+                </div>
             </div>
             <div class="control-group">
                 <h2>Tuning</h2>
@@ -494,6 +502,14 @@
             },
             maxPolyphony: 8,
         };
+
+        function applyOctaveShift(note) {
+            const shift = SynthState.octaveShift || 0;
+            if (!shift || !note) return note;
+            const match = /^([A-G]#?)(-?\d+)$/.exec(note);
+            if (!match) return note;
+            return match[1] + (parseInt(match[2], 10) + shift);
+        }
         // New Tuning System
         const TuningSystem = {
             frequencies: new Array(128).fill(null),
@@ -607,6 +623,7 @@
             lfoEnabled: false,
             noiseEnabled: false,
             whiteKeysOnly: false,
+            octaveShift: 0,
             arpeggiator: {
                 isOn: false,
                 pattern: 'up',
@@ -1742,12 +1759,12 @@
 
                 // Note On
                 if (command === 9 && velocity > 0) {
-                    const noteName = this.midiNoteToName(note);
+                    const noteName = applyOctaveShift(this.midiNoteToName(note));
                     if (noteName) Voice.play(noteName);
                 }
                 // Note Off (or Note On with velocity 0)
                 else if (command === 8 || (command === 9 && velocity === 0)) {
-                    const noteName = this.midiNoteToName(note);
+                    const noteName = applyOctaveShift(this.midiNoteToName(note));
                     if (noteName) Voice.release(noteName);
                 }
                 // Pitch Bend
@@ -2618,6 +2635,12 @@
                     SynthState.whiteKeysOnly = e.target.checked;
                 });
 
+                SynthState.controls.octaveShift = document.getElementById('octaveShift');
+                SynthState.controls.octaveShift.addEventListener('change', (e) => {
+                    Voice.stopAllNotes();
+                    SynthState.octaveShift = parseInt(e.target.value, 10) || 0;
+                });
+
                 // Keyboard controls
                 document.addEventListener('keydown', (event) => {
                     let key = event.key.toLowerCase();
@@ -2637,7 +2660,7 @@
                     }
 
                     const keyboardMap = SynthState.whiteKeysOnly ? SynthConfig.whiteKeysOnlyMap : SynthConfig.keyboardMap;
-                    const note = keyboardMap[key];
+                    const note = applyOctaveShift(keyboardMap[key]);
                     if (note && !event.repeat) {
                         Voice.play(note);
                         event.preventDefault();
@@ -2662,7 +2685,7 @@
                     }
 
                     const keyboardMap = SynthState.whiteKeysOnly ? SynthConfig.whiteKeysOnlyMap : SynthConfig.keyboardMap;
-                    const note = keyboardMap[key];
+                    const note = applyOctaveShift(keyboardMap[key]);
                     if (note) {
                         Voice.release(note);
                         event.preventDefault();
