@@ -80,6 +80,86 @@
             </div>
         </div>
     </div>
+    <!-- Cthulhu Modal: Step Arp -->
+    <div id="cthulhuModal" class="modal" style="display: none;">
+        <div class="cthulhu-modal-content">
+            <div class="cthulhu-header">
+                <h2><i class="fa-solid fa-eye"></i> Cthulhu <span class="cthulhu-tagline">step arpeggiator</span></h2>
+                <div class="cthulhu-master">
+                    <label class="cthulhu-toggle cthulhu-toggle-big">
+                        <input type="checkbox" id="cthulhuEnable">
+                        <span>On</span>
+                    </label>
+                    <button id="closeCthulhu" class="close-btn"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
+            <div class="cthulhu-toolbar">
+                <label class="cthulhu-toggle">
+                    <input type="checkbox" id="cthulhuArpLatch">
+                    <span>Latch</span>
+                </label>
+                <label>BPM
+                    <input type="number" id="cthulhuArpBpm" min="40" max="300" value="120" class="cthulhu-num">
+                </label>
+                <label>Rate
+                    <select id="cthulhuArpRate">
+                        <option value="1/4">1/4</option>
+                        <option value="1/8">1/8</option>
+                        <option value="1/16" selected>1/16</option>
+                        <option value="1/32">1/32</option>
+                        <option value="1/8T">1/8T</option>
+                        <option value="1/16T">1/16T</option>
+                    </select>
+                </label>
+                <label>Steps
+                    <input type="number" id="cthulhuArpLength" min="1" max="16" value="16" class="cthulhu-num">
+                </label>
+                <label>Swing <span id="cthulhuArpSwingVal">0%</span>
+                    <input type="range" id="cthulhuArpSwing" min="0" max="50" step="1" value="0" class="cthulhu-slider">
+                </label>
+                <label>Strum <span id="cthulhuArpStrumVal">0ms</span>
+                    <input type="range" id="cthulhuArpStrum" min="-150" max="150" step="1" value="0" class="cthulhu-slider">
+                </label>
+                <span class="cthulhu-toolbar-spacer"></span>
+                <div class="cthulhu-held" title="Notes currently in the held chord (what the arp is playing)">
+                    <span class="cthulhu-held-label">HELD</span>
+                    <span class="cthulhu-held-display" id="cthulhuHeldDisplay">—</span>
+                </div>
+                <button class="cthulhu-btn cthulhu-pat-btn" data-pat="up">Up</button>
+                <button class="cthulhu-btn cthulhu-pat-btn" data-pat="clear">Clear</button>
+                <button class="cthulhu-btn cthulhu-btn-warn" id="cthulhuPanic" title="Stop all sound &amp; release everything">Panic</button>
+            </div>
+
+            <div class="cthulhu-stage">
+                <div class="cthulhu-tone-grid-wrap">
+                    <div class="cthulhu-tone-axis" id="cthulhuToneAxis"></div>
+                    <div class="cthulhu-tone-grid" id="cthulhuToneGrid"></div>
+                </div>
+                <div class="cthulhu-step-numbers-row">
+                    <span class="cthulhu-param-label">STEP</span>
+                    <div class="cthulhu-step-numbers" id="cthulhuStepNumbers"></div>
+                </div>
+                <div class="cthulhu-param-row">
+                    <span class="cthulhu-param-label" title="Octave shift per step (-2..+2). Scroll to change.">OCT</span>
+                    <div class="cthulhu-param-cells" id="cthulhuOctRow"></div>
+                </div>
+                <div class="cthulhu-param-row">
+                    <span class="cthulhu-param-label" title="Velocity per step (0..1). Scroll or drag to change.">VEL</span>
+                    <div class="cthulhu-param-cells" id="cthulhuVelRow"></div>
+                </div>
+                <div class="cthulhu-param-row">
+                    <span class="cthulhu-param-label" title="Gate length as fraction of the step (5%..100%). Scroll or drag to change.">GATE</span>
+                    <div class="cthulhu-param-cells" id="cthulhuGateRow"></div>
+                </div>
+            </div>
+
+            <div class="cthulhu-help">
+                <small>Click cells in the grid to set which chord-tone plays on each step (1 = lowest held note). Click again to remove. Multiple cells in one column = multiple notes at once. Scroll over <kbd>OCT</kbd>/<kbd>VEL</kbd>/<kbd>GATE</kbd> cells to change. <kbd>?</kbd> row plays a random held tone.</small>
+            </div>
+        </div>
+    </div>
+
     <div id="synth-container">
         <h1>Browsynth</h1>
         <div id="synth-content">
@@ -147,6 +227,10 @@
             <span class="control-separator"></span>
             <button id="midiEnableButton" class="control-button" title="Enable MIDI Input">
                 <i class="fas fa-plug"></i>
+            </button>
+            <span class="control-separator"></span>
+            <button id="cthulhuButton" class="control-button cthulhu-trigger-btn" title="Cthulhu (Chord Mode &amp; Step Arp)">
+                <i class="fas fa-eye"></i> <span>Cthulhu</span>
             </button>
         </div>
         <div id="controls">
@@ -631,6 +715,24 @@
                 notes: [],
                 currentIndex: 0,
                 intervalId: null
+            },
+            cthulhu: {
+                enabled: false,                   // master on/off — when on, all notes route through the step arp
+                pressedByUser: new Set(),         // notes the user is physically holding (source of truth)
+                pendingLatchReset: false,         // next keypress (after all released) clears latched heldNotes
+                arp: {
+                    latch: false,
+                    bpm: 120,
+                    rate: '1/16',
+                    length: 16,
+                    swing: 0,                     // 0..0.5
+                    strum: 0,                     // ms (negative = down-strum)
+                    steps: [],                    // populated in Cthulhu.init; each = { tones:[], octave, velocity, gate }
+                    heldNotes: [],                // sorted ascending — derived from pressedByUser (or latched)
+                    currentStep: 0,
+                    timeoutId: null,
+                    activeNotes: new Set()        // currently-sounding arp notes (for cleanup)
+                }
             },
             filterEnabled: true,
             filterSettings: {
@@ -1684,6 +1786,11 @@
                     if (el) settings[id] = el.checked;
                 });
 
+                // Snapshot Cthulhu state alongside other settings
+                if (typeof Cthulhu !== 'undefined' && Cthulhu.snapshot) {
+                    settings.__cthulhu = Cthulhu.snapshot();
+                }
+
                 return settings;
             },
 
@@ -1691,6 +1798,7 @@
                 if (!settings) return;
 
                 Object.entries(settings).forEach(([key, value]) => {
+                    if (key === '__cthulhu') return; // handled below
                     const el = document.getElementById(key);
                     if (!el) return;
 
@@ -1702,6 +1810,11 @@
                         el.dispatchEvent(new Event('input'));
                     }
                 });
+
+                // Restore Cthulhu state if present
+                if (settings.__cthulhu && typeof Cthulhu !== 'undefined' && Cthulhu.restore) {
+                    Cthulhu.restore(settings.__cthulhu);
+                }
 
                 // Update all knob displays
                 if (typeof UI !== 'undefined' && UI.updateCircularControls) {
@@ -2054,6 +2167,10 @@
 
             play(note, isArpeggiator = false) {
                 if (!Synth.audioContext) return;
+                if (SynthState.cthulhu && SynthState.cthulhu.enabled && !isArpeggiator) {
+                    Cthulhu.handleNoteOn(note);
+                    return;
+                }
                 if (SynthState.arpeggiator.isOn && !isArpeggiator) {
                     Arpeggiator.addNote(note);
                     return;
@@ -2171,6 +2288,10 @@
             },
 
             release(note, isArpeggiator = false) {
+                if (SynthState.cthulhu && SynthState.cthulhu.enabled && !isArpeggiator) {
+                    Cthulhu.handleNoteOff(note);
+                    return;
+                }
                 if (SynthState.arpeggiator.isOn && !isArpeggiator) {
                     Arpeggiator.removeNote(note);
                     return;
@@ -2225,6 +2346,10 @@
                 if (keyElement) keyElement.classList.remove('active');
             },
             stopAllNotes: function (isArpeggiator = false) {
+                if (SynthState.cthulhu && SynthState.cthulhu.enabled && !isArpeggiator) {
+                    Cthulhu.panic();
+                    return;
+                }
                 if (SynthState.arpeggiator.isOn && !isArpeggiator) {
                     Arpeggiator.stop();
                     return;
@@ -2426,6 +2551,588 @@
                 }
             },
         };
+
+        // ─────────────────────────────────────────────────────────────
+        //  CTHULHU — step arpeggiator (à la Xfer Cthulhu)
+        // ─────────────────────────────────────────────────────────────
+        const CthulhuConfig = {
+            NOTE_NAMES: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+            TONE_ROWS: 8,    // chord-tone rows in the grid (1..8 from bottom up)
+            STEPS: 16,
+            // Step subdivisions per 4/4 bar
+            RATE_MAP: {
+                '1/4': 4, '1/8': 8, '1/16': 16, '1/32': 32,
+                '1/8T': 12, '1/16T': 24
+            },
+
+            noteToMidi(name) {
+                const m = /^([A-G]#?)(-?\d+)$/.exec(name);
+                if (!m) return 60;
+                const idx = this.NOTE_NAMES.indexOf(m[1]);
+                return idx + (parseInt(m[2], 10) + 1) * 12;
+            },
+            midiToNote(midi) {
+                const octave = Math.floor(midi / 12) - 1;
+                return this.NOTE_NAMES[((midi % 12) + 12) % 12] + octave;
+            },
+            shiftOctave(noteName, by) {
+                const m = /^([A-G]#?)(-?\d+)$/.exec(noteName);
+                if (!m) return noteName;
+                return m[1] + (parseInt(m[2], 10) + by);
+            }
+        };
+
+        const Cthulhu = {
+            DEFAULT_STEP: { tones: [], octave: 0, velocity: 1.0, gate: 0.85 },
+            initialized: false,
+
+            init() {
+                if (this.initialized) return;
+                this.initialized = true;
+                // Initialize 16 empty steps
+                const steps = [];
+                for (let i = 0; i < CthulhuConfig.STEPS; i++) {
+                    steps.push({ tones: [], octave: 0, velocity: 1.0, gate: 0.85 });
+                }
+                SynthState.cthulhu.arp.steps = steps;
+                this.applyPattern('up'); // sensible default
+
+                this.renderGrid();
+                this.setupListeners();
+            },
+
+            // ── UI: Open / Close ──
+            open() {
+                document.getElementById('cthulhuModal').style.display = 'flex';
+                this.renderGrid();
+                this.syncControlsFromState();
+            },
+            close() {
+                document.getElementById('cthulhuModal').style.display = 'none';
+            },
+
+            // ── UI: Render the entire grid (tone-grid + step numbers + param rows) ──
+            renderGrid() {
+                this.renderToneGrid();
+                this.renderStepNumbers();
+                this.renderParamRows();
+            },
+
+            renderToneGrid() {
+                const axis = document.getElementById('cthulhuToneAxis');
+                const grid = document.getElementById('cthulhuToneGrid');
+                if (!axis || !grid) return;
+
+                axis.innerHTML = '';
+                grid.innerHTML = '';
+                const steps = SynthState.cthulhu.arp.steps;
+                const length = SynthState.cthulhu.arp.length;
+                const rows = CthulhuConfig.TONE_ROWS;
+
+                // Y-axis labels: ? at top, then 8..1 going down (1 at bottom)
+                const labels = ['?', ...Array.from({ length: rows }, (_, i) => String(rows - i))];
+                labels.forEach((lbl) => {
+                    const a = document.createElement('div');
+                    a.className = 'cthulhu-tone-axis-label';
+                    a.textContent = lbl;
+                    axis.appendChild(a);
+                });
+
+                // Grid rows: special "rand" row first, then tone rows from high to low
+                const rowDefs = [{ tone: 'rand' }, ...Array.from({ length: rows }, (_, i) => ({ tone: rows - i }))];
+                grid.style.gridTemplateColumns = `repeat(${CthulhuConfig.STEPS}, 1fr)`;
+                grid.style.gridTemplateRows = `repeat(${rowDefs.length}, 1fr)`;
+
+                rowDefs.forEach((row) => {
+                    for (let s = 0; s < CthulhuConfig.STEPS; s++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cthulhu-grid-cell';
+                        cell.dataset.step = String(s);
+                        cell.dataset.tone = String(row.tone);
+                        if (row.tone === 'rand') cell.classList.add('cthulhu-grid-cell-rand');
+                        if (s >= length) cell.classList.add('cthulhu-grid-cell-disabled');
+
+                        const isActive = steps[s].tones.includes(row.tone);
+                        if (isActive) cell.classList.add('cthulhu-grid-cell-on');
+
+                        cell.addEventListener('click', () => this.toggleStepTone(s, row.tone));
+                        grid.appendChild(cell);
+                    }
+                });
+            },
+
+            toggleStepTone(stepIdx, tone) {
+                const step = SynthState.cthulhu.arp.steps[stepIdx];
+                if (!step) return;
+                const i = step.tones.indexOf(tone);
+                if (i >= 0) step.tones.splice(i, 1);
+                else step.tones.push(tone);
+                // re-render just the affected column for snappy feedback
+                document.querySelectorAll(`.cthulhu-grid-cell[data-step="${stepIdx}"]`).forEach(cell => {
+                    const cellTone = cell.dataset.tone === 'rand' ? 'rand' : parseInt(cell.dataset.tone, 10);
+                    cell.classList.toggle('cthulhu-grid-cell-on', step.tones.includes(cellTone));
+                });
+            },
+
+            renderStepNumbers() {
+                const wrap = document.getElementById('cthulhuStepNumbers');
+                if (!wrap) return;
+                wrap.innerHTML = '';
+                const length = SynthState.cthulhu.arp.length;
+                for (let s = 0; s < CthulhuConfig.STEPS; s++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cthulhu-step-number';
+                    if (s >= length) cell.classList.add('cthulhu-step-number-disabled');
+                    cell.textContent = String(s + 1);
+                    wrap.appendChild(cell);
+                }
+            },
+
+            renderParamRows() {
+                const length = SynthState.cthulhu.arp.length;
+                const steps = SynthState.cthulhu.arp.steps;
+                const rows = [
+                    { id: 'cthulhuOctRow', key: 'octave', display: (s) => (s.octave > 0 ? '+' + s.octave : String(s.octave)), bar: false,
+                      delta: (s, dir) => { s.octave = Math.max(-2, Math.min(2, s.octave + dir)); } },
+                    { id: 'cthulhuVelRow', key: 'velocity', display: (s) => Math.round(s.velocity * 100) + '%', bar: true,
+                      delta: (s, dir) => { s.velocity = Math.max(0, Math.min(1, +(s.velocity + dir * 0.1).toFixed(2))); } },
+                    { id: 'cthulhuGateRow', key: 'gate', display: (s) => Math.round(s.gate * 100) + '%', bar: true,
+                      delta: (s, dir) => { s.gate = Math.max(0.05, Math.min(1, +(s.gate + dir * 0.05).toFixed(2))); } }
+                ];
+
+                rows.forEach(row => {
+                    const wrap = document.getElementById(row.id);
+                    if (!wrap) return;
+                    wrap.innerHTML = '';
+                    for (let s = 0; s < CthulhuConfig.STEPS; s++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cthulhu-param-cell';
+                        if (s >= length) cell.classList.add('cthulhu-param-cell-disabled');
+
+                        if (row.bar) {
+                            const fill = document.createElement('div');
+                            fill.className = 'cthulhu-param-cell-fill';
+                            fill.style.height = (steps[s][row.key] * 100) + '%';
+                            cell.appendChild(fill);
+                        }
+                        const lbl = document.createElement('span');
+                        lbl.className = 'cthulhu-param-cell-label';
+                        lbl.textContent = row.display(steps[s]);
+                        cell.appendChild(lbl);
+
+                        const refresh = () => {
+                            lbl.textContent = row.display(steps[s]);
+                            if (row.bar) {
+                                const fill = cell.querySelector('.cthulhu-param-cell-fill');
+                                if (fill) fill.style.height = (steps[s][row.key] * 100) + '%';
+                            }
+                        };
+
+                        // Scroll wheel to change value
+                        cell.addEventListener('wheel', (e) => {
+                            e.preventDefault();
+                            const dir = e.deltaY < 0 ? 1 : -1;
+                            row.delta(steps[s], dir);
+                            refresh();
+                        }, { passive: false });
+
+                        // Drag-vertical for touch / mouse (alternative to wheel)
+                        let dragging = false, lastY = 0;
+                        const onMove = (e) => {
+                            if (!dragging) return;
+                            const y = e.touches ? e.touches[0].clientY : e.clientY;
+                            const dy = lastY - y;
+                            if (Math.abs(dy) >= 6) {
+                                row.delta(steps[s], dy > 0 ? 1 : -1);
+                                refresh();
+                                lastY = y;
+                            }
+                            e.preventDefault();
+                        };
+                        const onUp = () => {
+                            dragging = false;
+                            document.removeEventListener('mousemove', onMove);
+                            document.removeEventListener('mouseup', onUp);
+                            document.removeEventListener('touchmove', onMove);
+                            document.removeEventListener('touchend', onUp);
+                        };
+                        cell.addEventListener('mousedown', (e) => {
+                            dragging = true;
+                            lastY = e.clientY;
+                            document.addEventListener('mousemove', onMove);
+                            document.addEventListener('mouseup', onUp);
+                            e.preventDefault();
+                        });
+                        cell.addEventListener('touchstart', (e) => {
+                            dragging = true;
+                            lastY = e.touches[0].clientY;
+                            document.addEventListener('touchmove', onMove, { passive: false });
+                            document.addEventListener('touchend', onUp);
+                            e.preventDefault();
+                        }, { passive: false });
+
+                        wrap.appendChild(cell);
+                    }
+                });
+            },
+
+            applyPattern(name) {
+                const arp = SynthState.cthulhu.arp;
+                const len = arp.length;
+                arp.steps.forEach(s => {
+                    s.tones = []; s.octave = 0; s.velocity = 1.0; s.gate = 0.85;
+                });
+                if (name === 'up') {
+                    // Each step plays exactly one chord-tone, ascending and wrapping (1..6)
+                    for (let i = 0; i < len; i++) {
+                        arp.steps[i].tones = [((i % 6) + 1)];
+                    }
+                }
+                // 'clear' is the reset above — nothing else to do
+                this.renderGrid();
+            },
+
+            // ── Note routing ──
+            handleNoteOn(note) {
+                if (!Synth.audioContext) return;
+                const C = SynthState.cthulhu;
+                const arp = C.arp;
+
+                // Latch reset: if all keys were previously released and we marked it pending,
+                // clear the latched held-notes before adding this fresh keypress.
+                if (arp.latch && C.pendingLatchReset && C.pressedByUser.size === 0) {
+                    arp.heldNotes = [];
+                }
+                C.pendingLatchReset = false;
+
+                if (!C.pressedByUser.has(note)) C.pressedByUser.add(note);
+                if (!arp.heldNotes.includes(note)) {
+                    arp.heldNotes.push(note);
+                    arp.heldNotes.sort((a, b) => CthulhuConfig.noteToMidi(a) - CthulhuConfig.noteToMidi(b));
+                }
+                this.updateHeldDisplay();
+                this.startArp();
+            },
+
+            handleNoteOff(note) {
+                const C = SynthState.cthulhu;
+                const arp = C.arp;
+                C.pressedByUser.delete(note);
+
+                if (arp.latch) {
+                    if (C.pressedByUser.size === 0) C.pendingLatchReset = true;
+                    this.updateHeldDisplay();
+                    return;
+                }
+                const idx = arp.heldNotes.indexOf(note);
+                if (idx >= 0) arp.heldNotes.splice(idx, 1);
+
+                this.updateHeldDisplay();
+                if (arp.heldNotes.length === 0) {
+                    this.stopArp();
+                }
+            },
+
+            updateHeldDisplay() {
+                const el = document.getElementById('cthulhuHeldDisplay');
+                if (!el) return;
+                const arp = SynthState.cthulhu.arp;
+                if (arp.heldNotes.length === 0) {
+                    el.textContent = '—';
+                    el.classList.remove('cthulhu-held-display-active');
+                } else {
+                    el.textContent = arp.heldNotes.join('  ');
+                    el.classList.add('cthulhu-held-display-active');
+                }
+                // Also indicate latch state visually
+                el.classList.toggle('cthulhu-held-display-latched', arp.latch && SynthState.cthulhu.pressedByUser.size === 0 && arp.heldNotes.length > 0);
+            },
+
+            // ── Arp scheduler (setTimeout chain so we can do swing) ──
+            startArp() {
+                const arp = SynthState.cthulhu.arp;
+                if (arp.timeoutId) return; // already running
+                arp.currentStep = 0;
+                // 15ms "chord gather window" — when the user presses a chord, the keydown
+                // events arrive sequentially over ~5-15ms. Deferring the first tick lets
+                // all simultaneously-pressed keys land in heldNotes before step 1 plays.
+                this.tickArp(15);
+            },
+
+            stopArp() {
+                const arp = SynthState.cthulhu.arp;
+                if (arp.timeoutId) {
+                    clearTimeout(arp.timeoutId);
+                    arp.timeoutId = null;
+                }
+                arp.activeNotes.forEach(n => Voice.release(n, true));
+                arp.activeNotes.clear();
+                this.clearStepHighlight();
+            },
+
+            tickArp(delay) {
+                const arp = SynthState.cthulhu.arp;
+                arp.timeoutId = setTimeout(() => {
+                    if (arp.heldNotes.length === 0) {
+                        this.stopArp();
+                        return;
+                    }
+                    this.playStep(arp.currentStep);
+                    const stepMs = this.calculateStepMs();
+                    const swing = arp.swing;
+                    const isOdd = (arp.currentStep % 2 === 1);
+                    const nextDelay = isOdd ? stepMs * (1 - swing) : stepMs * (1 + swing);
+                    arp.currentStep = (arp.currentStep + 1) % arp.length;
+                    this.tickArp(nextDelay);
+                }, delay);
+            },
+
+            calculateStepMs() {
+                const arp = SynthState.cthulhu.arp;
+                const stepsPerBar = CthulhuConfig.RATE_MAP[arp.rate] || 16;
+                return (60000 / arp.bpm) * 4 / stepsPerBar;
+            },
+
+            playStep(idx) {
+                const arp = SynthState.cthulhu.arp;
+                this.highlightStep(idx);
+                const step = arp.steps[idx];
+                if (!step || step.tones.length === 0) return;
+                if (arp.heldNotes.length === 0) return;
+
+                // Resolve tone indices into note names
+                const notesToPlay = [];
+                step.tones.forEach(tone => {
+                    if (tone === 'rand') {
+                        const r = Math.floor(Math.random() * arp.heldNotes.length);
+                        notesToPlay.push(arp.heldNotes[r]);
+                    } else {
+                        const n = arp.heldNotes.length;
+                        const toneIdx = tone - 1;
+                        const wrapped = ((toneIdx % n) + n) % n;
+                        const octWrap = Math.floor(toneIdx / n);
+                        const baseNote = arp.heldNotes[wrapped];
+                        if (baseNote) notesToPlay.push(CthulhuConfig.shiftOctave(baseNote, octWrap));
+                    }
+                });
+                // Apply per-step octave shift
+                const finalNotes = step.octave
+                    ? notesToPlay.map(n => CthulhuConfig.shiftOctave(n, step.octave))
+                    : notesToPlay;
+                if (finalNotes.length === 0) return;
+
+                // Release prior arp notes
+                arp.activeNotes.forEach(n => Voice.release(n, true));
+                arp.activeNotes.clear();
+
+                // Strum
+                const strum = arp.strum;
+                const order = strum >= 0 ? finalNotes : [...finalNotes].reverse();
+                const strumStep = Math.abs(strum);
+                order.forEach((n, i) => {
+                    const delay = strumStep * i;
+                    if (delay === 0) {
+                        Voice.play(n, true);
+                        arp.activeNotes.add(n);
+                    } else {
+                        setTimeout(() => {
+                            // Only play if we haven't been stopped in the meantime
+                            if (arp.timeoutId === null && !arp.heldNotes.length) return;
+                            Voice.play(n, true);
+                            arp.activeNotes.add(n);
+                        }, delay);
+                    }
+                });
+
+                // Gate-based release
+                const stepMs = this.calculateStepMs();
+                const gateMs = Math.max(20, stepMs * step.gate);
+                const playedSnapshot = [...finalNotes];
+                setTimeout(() => {
+                    playedSnapshot.forEach(n => {
+                        if (arp.activeNotes.has(n)) {
+                            Voice.release(n, true);
+                            arp.activeNotes.delete(n);
+                        }
+                    });
+                }, gateMs);
+            },
+
+            highlightStep(idx) {
+                const cells = document.querySelectorAll('.cthulhu-step-number');
+                cells.forEach((c, i) => c.classList.toggle('cthulhu-step-number-playing', i === idx));
+                document.querySelectorAll('.cthulhu-grid-cell').forEach(c => {
+                    c.classList.toggle('cthulhu-grid-cell-column-playing', parseInt(c.dataset.step, 10) === idx);
+                });
+            },
+            clearStepHighlight() {
+                document.querySelectorAll('.cthulhu-step-number-playing').forEach(c => c.classList.remove('cthulhu-step-number-playing'));
+                document.querySelectorAll('.cthulhu-grid-cell-column-playing').forEach(c => c.classList.remove('cthulhu-grid-cell-column-playing'));
+            },
+
+            panic() {
+                const C = SynthState.cthulhu;
+                this.stopArp();
+                C.pressedByUser.clear();
+                C.arp.heldNotes = [];
+                C.pendingLatchReset = false;
+                // Force-release any leftover voices
+                Object.keys(SynthState.activeVoices).forEach(n => Voice.release(n, true));
+                SynthState.activeNotes.clear();
+                document.querySelectorAll('#piano .key.active').forEach(k => k.classList.remove('active'));
+                this.updateHeldDisplay();
+            },
+
+            snapshot() {
+                const C = SynthState.cthulhu;
+                return {
+                    enabled: C.enabled,
+                    arp: {
+                        latch: C.arp.latch,
+                        bpm: C.arp.bpm,
+                        rate: C.arp.rate,
+                        length: C.arp.length,
+                        swing: C.arp.swing,
+                        strum: C.arp.strum,
+                        steps: C.arp.steps.map(s => ({
+                            tones: [...s.tones],
+                            octave: s.octave,
+                            velocity: s.velocity,
+                            gate: s.gate
+                        }))
+                    }
+                };
+            },
+            restore(snap) {
+                if (!snap) return;
+                const C = SynthState.cthulhu;
+                this.stopArp();
+                if (snap.arp) {
+                    C.arp.latch = !!snap.arp.latch;
+                    C.arp.bpm = snap.arp.bpm || 120;
+                    C.arp.rate = snap.arp.rate || '1/16';
+                    C.arp.length = snap.arp.length || 16;
+                    C.arp.swing = snap.arp.swing || 0;
+                    C.arp.strum = snap.arp.strum || 0;
+                    if (Array.isArray(snap.arp.steps)) {
+                        C.arp.steps = snap.arp.steps.map(s => ({
+                            tones: Array.isArray(s.tones) ? [...s.tones] : [],
+                            octave: s.octave || 0,
+                            velocity: typeof s.velocity === 'number' ? s.velocity : 1.0,
+                            gate: typeof s.gate === 'number' ? s.gate : 0.85
+                        }));
+                        while (C.arp.steps.length < CthulhuConfig.STEPS) {
+                            C.arp.steps.push({ tones: [], octave: 0, velocity: 1.0, gate: 0.85 });
+                        }
+                    }
+                }
+                C.enabled = !!snap.enabled;
+                this.syncControlsFromState();
+                this.renderGrid();
+            },
+
+            syncControlsFromState() {
+                const C = SynthState.cthulhu;
+                const set = (id, val, prop = 'value') => {
+                    const el = document.getElementById(id);
+                    if (el) el[prop] = val;
+                };
+                set('cthulhuEnable', C.enabled, 'checked');
+                set('cthulhuArpLatch', C.arp.latch, 'checked');
+                set('cthulhuArpBpm', C.arp.bpm);
+                set('cthulhuArpRate', C.arp.rate);
+                set('cthulhuArpLength', C.arp.length);
+                set('cthulhuArpSwing', Math.round(C.arp.swing * 100));
+                set('cthulhuArpStrum', C.arp.strum);
+                const sw = document.getElementById('cthulhuArpSwingVal');
+                if (sw) sw.textContent = Math.round(C.arp.swing * 100) + '%';
+                const st = document.getElementById('cthulhuArpStrumVal');
+                if (st) st.textContent = C.arp.strum + 'ms';
+                this.refreshCthulhuButton();
+            },
+
+            refreshCthulhuButton() {
+                const btn = document.getElementById('cthulhuButton');
+                if (!btn) return;
+                btn.classList.toggle('cthulhu-active', SynthState.cthulhu.enabled);
+            },
+
+            setupListeners() {
+                // Open / close
+                document.getElementById('cthulhuButton').addEventListener('click', () => this.open());
+                document.getElementById('closeCthulhu').addEventListener('click', () => this.close());
+                document.getElementById('cthulhuModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'cthulhuModal') this.close();
+                });
+
+                // Master enable
+                document.getElementById('cthulhuEnable').addEventListener('change', (e) => {
+                    SynthState.cthulhu.enabled = e.target.checked;
+                    if (!SynthState.cthulhu.enabled) {
+                        this.panic();
+                    } else {
+                        // Disable the legacy arp to avoid double-triggering
+                        if (SynthState.controls.arpToggle && SynthState.controls.arpToggle.checked) {
+                            SynthState.controls.arpToggle.checked = false;
+                            SynthState.controls.arpToggle.dispatchEvent(new Event('change'));
+                        }
+                    }
+                    this.refreshCthulhuButton();
+                });
+
+                document.getElementById('cthulhuArpLatch').addEventListener('change', (e) => {
+                    SynthState.cthulhu.arp.latch = e.target.checked;
+                    if (!e.target.checked && SynthState.cthulhu.pressedByUser.size === 0) {
+                        // un-latching with no keys pressed: clear and stop
+                        SynthState.cthulhu.arp.heldNotes = [];
+                        this.stopArp();
+                    }
+                    this.updateHeldDisplay();
+                });
+                document.getElementById('cthulhuArpBpm').addEventListener('change', (e) => {
+                    let v = parseInt(e.target.value, 10);
+                    if (isNaN(v) || v < 40) v = 40;
+                    if (v > 300) v = 300;
+                    e.target.value = v;
+                    SynthState.cthulhu.arp.bpm = v;
+                });
+                document.getElementById('cthulhuArpRate').addEventListener('change', (e) => {
+                    SynthState.cthulhu.arp.rate = e.target.value;
+                });
+                document.getElementById('cthulhuArpLength').addEventListener('change', (e) => {
+                    let v = parseInt(e.target.value, 10);
+                    if (isNaN(v) || v < 1) v = 1;
+                    if (v > 16) v = 16;
+                    e.target.value = v;
+                    SynthState.cthulhu.arp.length = v;
+                    this.renderGrid();
+                });
+                document.getElementById('cthulhuArpSwing').addEventListener('input', (e) => {
+                    const v = parseInt(e.target.value, 10);
+                    SynthState.cthulhu.arp.swing = v / 100;
+                    document.getElementById('cthulhuArpSwingVal').textContent = v + '%';
+                });
+                document.getElementById('cthulhuArpStrum').addEventListener('input', (e) => {
+                    const v = parseInt(e.target.value, 10);
+                    SynthState.cthulhu.arp.strum = v;
+                    document.getElementById('cthulhuArpStrumVal').textContent = v + 'ms';
+                });
+
+                // Pattern preset buttons (only Up + Clear)
+                document.querySelectorAll('.cthulhu-pat-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.applyPattern(btn.dataset.pat));
+                });
+
+                // Panic button — also useful for the user when something gets stuck
+                document.getElementById('cthulhuPanic').addEventListener('click', () => this.panic());
+
+                // Window blur — let go of all keys (browser stops sending keyup if focus lost)
+                window.addEventListener('blur', () => {
+                    if (SynthState.cthulhu.enabled) this.panic();
+                });
+            }
+        };
+
         // UI related functions
         const UI = {
             createPiano() {
@@ -3116,6 +3823,10 @@
                 // Initialize Wavetable Editor
                 WavetableEditor.init();
                 WavetableEditor.apply(); // Apply default wavetable
+
+                // Initialize Cthulhu (chord trigger + step arp)
+                Cthulhu.init();
+                Cthulhu.syncControlsFromState();
 
                 // Synth mode change handler - show/hide wavetable controls
                 SynthState.controls.synthMode.addEventListener('change', (e) => {

@@ -908,3 +908,396 @@ select {
 #wavetableControls .control {
   margin-top: 5px;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   CTHULHU — step arpeggiator
+   ───────────────────────────────────────────────────────────── */
+.cthulhu-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-weight: 600;
+}
+.cthulhu-trigger-btn.cthulhu-active {
+  background: #00ff9d;
+  color: #000;
+  box-shadow: 0 0 8px rgba(0, 255, 157, 0.6);
+}
+.cthulhu-trigger-btn i { color: #00ff9d; }
+.cthulhu-trigger-btn.cthulhu-active i { color: #000; }
+
+/* ── Modal shell ── */
+.cthulhu-modal-content {
+  background: #0d0d0d;
+  color: #d8d8d8;
+  border-radius: 6px;
+  width: 96vw;
+  max-width: 1320px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #1f1f1f;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 255, 157, 0.06);
+  font-family: 'Courier New', monospace;
+}
+
+.cthulhu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid #1f1f1f;
+  background: linear-gradient(180deg, #1a1a1a, #0d0d0d);
+}
+.cthulhu-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #00ff9d;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.cthulhu-tagline {
+  font-size: 11px;
+  color: #555;
+  letter-spacing: 2px;
+  font-weight: normal;
+}
+.cthulhu-master {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.close-btn {
+  background: transparent;
+  color: #666;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 3px;
+}
+.close-btn:hover { color: #00ff9d; background: #1a1a1a; }
+
+/* ── Toolbar ── */
+.cthulhu-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 18px;
+  background: #131313;
+  border-bottom: 1px solid #1f1f1f;
+}
+.cthulhu-toolbar label {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #777;
+  letter-spacing: 1px;
+}
+.cthulhu-toolbar select,
+.cthulhu-toolbar input[type="number"] {
+  background: #1a1a1a;
+  color: #00ff9d;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+}
+.cthulhu-toolbar input[type="number"] {
+  width: 64px;
+  text-align: center;
+}
+.cthulhu-toolbar input[type="range"] {
+  width: 110px;
+  accent-color: #00ff9d;
+}
+.cthulhu-toolbar-spacer { flex: 1; }
+
+.cthulhu-held {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #0a0a0a;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  min-width: 140px;
+}
+.cthulhu-held-label {
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+.cthulhu-held-display {
+  font-size: 11px;
+  color: #555;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow-x: auto;
+  max-width: 220px;
+}
+.cthulhu-held-display-active { color: #00ff9d; }
+.cthulhu-held-display-latched { color: #ffaa00; }
+
+
+.cthulhu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 10px;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+}
+.cthulhu-toggle input[type="checkbox"] { margin: 0; cursor: pointer; accent-color: #00ff9d; }
+.cthulhu-toggle span {
+  font-size: 11px;
+  color: #d8d8d8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.cthulhu-toggle:has(input:checked) {
+  background: #003322;
+  border-color: #00ff9d;
+}
+.cthulhu-toggle:has(input:checked) span { color: #00ff9d; }
+.cthulhu-toggle-big { padding: 6px 14px; }
+.cthulhu-toggle-big span { font-size: 13px; font-weight: 700; }
+
+.cthulhu-num { width: 60px; }
+.cthulhu-slider { width: 110px; }
+
+.cthulhu-btn {
+  background: #1a1a1a;
+  color: #d8d8d8;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: inherit;
+  font-weight: 600;
+}
+.cthulhu-btn:hover {
+  background: #00ff9d;
+  color: #000;
+  border-color: #00ff9d;
+}
+.cthulhu-btn-warn {
+  background: #2a1a1a;
+  border-color: #4a2a2a;
+  color: #ff6a6a;
+}
+.cthulhu-btn-warn:hover {
+  background: #ff4a4a;
+  color: #000;
+  border-color: #ff4a4a;
+}
+
+/* ── Main stage ── */
+.cthulhu-stage {
+  padding: 14px 18px;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.cthulhu-tone-grid-wrap {
+  display: flex;
+  align-items: stretch;
+  margin-bottom: 4px;
+}
+.cthulhu-tone-axis {
+  display: flex;
+  flex-direction: column;
+  width: 38px;
+  margin-right: 4px;
+}
+.cthulhu-tone-axis-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 1px;
+  font-weight: 700;
+  border-right: 1px solid #1f1f1f;
+  padding-right: 6px;
+}
+
+.cthulhu-tone-grid {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  background: #1f1f1f;
+  padding: 2px;
+  border-radius: 3px;
+  min-height: 320px;
+}
+.cthulhu-grid-cell {
+  background: #0a0a0a;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.05s ease, box-shadow 0.05s ease;
+  position: relative;
+  border: 1px solid transparent;
+}
+.cthulhu-grid-cell:hover {
+  background: #181818;
+  border-color: #2a2a2a;
+}
+.cthulhu-grid-cell-rand {
+  background: #0d0a14;
+}
+.cthulhu-grid-cell-rand:hover {
+  background: #1a1224;
+}
+.cthulhu-grid-cell-on {
+  background: #00ff9d;
+  box-shadow: 0 0 6px rgba(0, 255, 157, 0.55), inset 0 0 4px rgba(255, 255, 255, 0.3);
+}
+.cthulhu-grid-cell-on:hover {
+  background: #00d484;
+}
+.cthulhu-grid-cell-rand.cthulhu-grid-cell-on {
+  background: #c466ff;
+  box-shadow: 0 0 6px rgba(196, 102, 255, 0.6);
+}
+.cthulhu-grid-cell-disabled {
+  opacity: 0.18;
+  pointer-events: none;
+}
+.cthulhu-grid-cell-column-playing {
+  outline: 1px solid #ff4a90;
+  outline-offset: -1px;
+}
+
+/* ── Step number row ── */
+.cthulhu-step-numbers-row,
+.cthulhu-param-row {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+.cthulhu-param-label {
+  width: 38px;
+  margin-right: 4px;
+  text-align: right;
+  padding-right: 6px;
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 1px;
+  font-weight: 700;
+  text-transform: uppercase;
+  cursor: help;
+  border-right: 1px solid #1f1f1f;
+  flex-shrink: 0;
+}
+.cthulhu-step-numbers,
+.cthulhu-param-cells {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  flex: 1;
+  background: #1f1f1f;
+  padding: 2px;
+  border-radius: 3px;
+}
+.cthulhu-step-number {
+  background: #0a0a0a;
+  text-align: center;
+  font-size: 10px;
+  color: #666;
+  padding: 4px 0;
+  border-radius: 2px;
+  font-weight: 700;
+}
+.cthulhu-step-number-disabled { opacity: 0.18; }
+.cthulhu-step-number-playing {
+  background: #ff4a90;
+  color: #000;
+  box-shadow: 0 0 6px rgba(255, 74, 144, 0.6);
+}
+
+/* ── Param cells (octave / velocity / gate) ── */
+.cthulhu-param-cell {
+  background: #0a0a0a;
+  position: relative;
+  height: 32px;
+  border-radius: 2px;
+  cursor: ns-resize;
+  overflow: hidden;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cthulhu-param-cell:hover {
+  background: #181818;
+  outline: 1px solid #2a2a2a;
+}
+.cthulhu-param-cell-disabled { opacity: 0.18; pointer-events: none; }
+.cthulhu-param-cell-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, #00ff9d, #006040);
+  pointer-events: none;
+  opacity: 0.55;
+}
+.cthulhu-param-cell-label {
+  position: relative;
+  font-size: 10px;
+  color: #d8d8d8;
+  font-weight: 700;
+  pointer-events: none;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.5px;
+}
+
+/* ── Help text ── */
+.cthulhu-help {
+  padding: 8px 18px 12px;
+  color: #555;
+  font-size: 11px;
+  border-top: 1px solid #1f1f1f;
+  font-family: 'Helvetica', Arial, sans-serif;
+}
+.cthulhu-help kbd {
+  background: #1a1a1a;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 10px;
+  color: #00ff9d;
+  border: 1px solid #2a2a2a;
+  font-family: 'Courier New', monospace;
+}
+
+@media (max-width: 800px) {
+  .cthulhu-toolbar { gap: 8px; padding: 8px 12px; }
+  .cthulhu-stage { padding: 8px 10px; }
+  .cthulhu-tone-grid { min-height: 260px; }
+  .cthulhu-param-cell { height: 24px; }
+  .cthulhu-tone-axis { width: 28px; }
+  .cthulhu-param-label { width: 28px; font-size: 8px; }
+}
+
