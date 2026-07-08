@@ -3841,8 +3841,31 @@
                     SynthState.octaveShift = parseInt(e.target.value, 10) || 0;
                 });
 
+                // Controls must not hog the keyboard: once a select/checkbox/
+                // slider/number input has been used, give focus back so keys play
+                // notes again (a focused <select> would otherwise type-ahead jump
+                // presets when a note key is pressed). Synthetic change events from
+                // preset loading don't bubble, so this only fires on user input.
+                document.addEventListener('change', (e) => {
+                    const el = e.target;
+                    if (el.matches && el.matches('select, input[type="checkbox"], input[type="number"], input[type="range"], input[type="file"]')) {
+                        el.blur();
+                    }
+                });
+                document.addEventListener('click', (e) => {
+                    const btn = e.target.closest && e.target.closest('button');
+                    if (btn) btn.blur();
+                });
+
+                // While actually typing in a text/number field, keys must type — not play notes
+                const isTypingTarget = (el) => el && (
+                    (el.tagName === 'INPUT' && (el.type === 'number' || el.type === 'text')) ||
+                    el.tagName === 'TEXTAREA'
+                );
+
                 // Keyboard controls
                 document.addEventListener('keydown', (event) => {
+                    if (isTypingTarget(event.target)) return;
                     let key = event.key.toLowerCase();
                     const location = event.location;
 
@@ -3868,6 +3891,7 @@
                 });
 
                 document.addEventListener('keyup', (event) => {
+                    if (isTypingTarget(event.target)) return;
                     let key = event.key.toLowerCase();
                     const location = event.location;
 
