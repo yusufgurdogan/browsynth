@@ -2324,6 +2324,7 @@
 
                 const updatePitchBend = (bend) => {
                     const now = Synth.audioContext.currentTime;
+                    pitchBend.bend = bend; // remembered so updateVoice() preserves the bend
                     const bendRange = pitchBend.range * 100; // Convert semitones to cents
                     oscillators.forEach((osc, i) => {
                         const detuneAmount = unisonCount > 1 ? (i / (unisonCount - 1) - 0.5) * detune : 0;
@@ -2395,7 +2396,9 @@
                             osc.type = SynthState.controls.waveform.value;
                         }
                         const offset = newUnisonCount > 1 ? (i / (newUnisonCount - 1) - 0.5) : 0;
-                        osc.detune.setValueAtTime(offset * newDetune, now);
+                        const bendCents = pitchBend.bend * pitchBend.range * 100;
+                        const totalDetune = offset * newDetune + bendCents;
+                        osc.detune.setValueAtTime(Math.max(-4800, Math.min(4800, isFinite(totalDetune) ? totalDetune : 0)), now);
 
                         const chain = unisonChains[i];
                         chain.gain.gain.setValueAtTime(1 - (1 - newBlend) * Math.min(1, Math.abs(offset) * 2), now);
