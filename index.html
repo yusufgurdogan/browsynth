@@ -100,7 +100,7 @@
                     <span>Latch</span>
                 </label>
                 <label>BPM
-                    <input type="number" id="cthulhuArpBpm" min="40" max="300" value="120" class="cthulhu-num">
+                    <input type="number" id="cthulhuArpBpm" min="40" max="300" value="138" class="cthulhu-num">
                 </label>
                 <label>Rate
                     <select id="cthulhuArpRate">
@@ -237,6 +237,10 @@
             <div class="control-group">
                 <h2>Master</h2>
                 <div class="control">
+                    <label for="globalBpm">BPM</label>
+                    <input type="number" id="globalBpm" min="40" max="300" value="138" class="bpm-input">
+                </div>
+                <div class="control">
                     <label for="masterVolume">Volume</label>
                     <div class="circular-control" data-unit="%">
                         <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.7">
@@ -250,11 +254,115 @@
                         <span class="knob-value">0%</span>
                     </div>
                 </div>
+            </div>
+            <div class="control-group">
+                <h2>Delay</h2>
                 <div class="control">
-                    <label for="masterDelay">Delay</label>
+                    <label for="masterDelay">Mix</label>
                     <div class="circular-control" data-unit="%">
                         <input type="range" id="masterDelay" min="0" max="1" step="0.01" value="0">
                         <span class="knob-value">0%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="delayDivision">Sync</label>
+                    <select id="delayDivision">
+                        <option value="1/4">1/4</option>
+                        <option value="1/8">1/8</option>
+                        <option value="1/8D" selected>1/8 Dotted</option>
+                        <option value="1/8T">1/8 Triplet</option>
+                        <option value="1/16">1/16</option>
+                        <option value="1/16D">1/16 Dotted</option>
+                        <option value="1/16T">1/16 Triplet</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="delayFeedback">Feedback</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="delayFeedback" min="0" max="0.85" step="0.01" value="0.45">
+                        <span class="knob-value">45%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Chorus &amp; Drive</h2>
+                <div class="control">
+                    <label for="chorusAmount">Chorus</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="chorusAmount" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="driveAmount">Drive</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="driveAmount" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Trance Gate</h2>
+                <div class="control">
+                    <label for="gateToggle">Gate On/Off</label>
+                    <input type="checkbox" id="gateToggle">
+                </div>
+                <div class="control">
+                    <label for="gateRate">Rate</label>
+                    <select id="gateRate">
+                        <option value="1/8">1/8</option>
+                        <option value="1/16" selected>1/16</option>
+                        <option value="1/32">1/32</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="gateDepth">Depth</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="gateDepth" min="0" max="1" step="0.01" value="1">
+                        <span class="knob-value">100%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="gateSmooth">Smooth</label>
+                    <div class="circular-control" data-unit="s" data-format="time">
+                        <input type="range" id="gateSmooth" min="0.001" max="0.05" step="0.001" value="0.01">
+                        <span class="knob-value">10ms</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label>Pattern</label>
+                    <div class="gate-pattern" id="gatePattern"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Sidechain</h2>
+                <div class="control">
+                    <label for="sidechainToggle">Pump On/Off</label>
+                    <input type="checkbox" id="sidechainToggle">
+                </div>
+                <div class="control">
+                    <label for="sidechainAmount">Amount</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="sidechainAmount" min="0" max="1" step="0.01" value="0.6">
+                        <span class="knob-value">60%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="sidechainRelease">Release</label>
+                    <div class="circular-control" data-unit="s" data-format="time">
+                        <input type="range" id="sidechainRelease" min="0.05" max="0.6" step="0.01" value="0.25">
+                        <span class="knob-value">250ms</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="kickToggle">Kick On/Off</label>
+                    <input type="checkbox" id="kickToggle">
+                </div>
+                <div class="control">
+                    <label for="kickLevel">Kick Level</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="kickLevel" min="0" max="1" step="0.01" value="0.8">
+                        <span class="knob-value">80%</span>
                     </div>
                 </div>
             </div>
@@ -319,6 +427,27 @@
                     <div class="circular-control" data-unit="ct">
                         <input type="range" id="detune" min="0" max="100" step="1" value="0">
                         <span class="knob-value">0ct</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="stereoSpread">Spread</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="stereoSpread" min="0" max="1" step="0.01" value="0.5">
+                        <span class="knob-value">50%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="unisonBlend">Blend</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="unisonBlend" min="0" max="1" step="0.01" value="1">
+                        <span class="knob-value">100%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="glideTime">Glide</label>
+                    <div class="circular-control" data-unit="s" data-format="time">
+                        <input type="range" id="glideTime" min="0" max="0.5" step="0.005" value="0">
+                        <span class="knob-value">0ms</span>
                     </div>
                 </div>
                 <div class="control">
@@ -592,6 +721,33 @@
             if (!match) return note;
             return match[1] + (parseInt(match[2], 10) + shift);
         }
+        // Global tempo — one BPM that the delay, trance gate, sidechain pump,
+        // kick and Cthulhu all sync to.
+        const Tempo = {
+            bpm: 138,
+            set(value) {
+                let v = parseInt(value, 10);
+                if (isNaN(v)) return;
+                v = Math.max(40, Math.min(300, v));
+                this.bpm = v;
+                // Keep both BPM inputs in sync (main panel + Cthulhu modal)
+                const g = document.getElementById('globalBpm');
+                if (g && parseInt(g.value, 10) !== v) g.value = v;
+                const c = document.getElementById('cthulhuArpBpm');
+                if (c && parseInt(c.value, 10) !== v) c.value = v;
+                if (typeof SynthState !== 'undefined' && SynthState.cthulhu) {
+                    SynthState.cthulhu.arp.bpm = v;
+                }
+                if (Synth.audioContext) Synth.updateDelayTime();
+            },
+            beatSec() {
+                return 60 / this.bpm;
+            },
+            barSec() {
+                return 240 / this.bpm;
+            }
+        };
+
         // New Tuning System
         const TuningSystem = {
             frequencies: new Array(128).fill(null),
@@ -699,6 +855,7 @@
             activeVoices: {},
             activeNotes: new Set(),
             controls: {},
+            lastFrequency: null,
             fmEnabled: false,
             lfoEnabled: false,
             noiseEnabled: false,
@@ -716,7 +873,7 @@
                 pendingLatchReset: false,         // next keypress (after all released) clears latched heldNotes
                 arp: {
                     latch: false,
-                    bpm: 120,
+                    bpm: 138,
                     rate: '1/16',
                     length: 16,
                     swing: 0,                     // 0..0.5
@@ -1652,87 +1809,174 @@
             },
 
             getFactoryPresets() {
+                // Every preset carries the full parameter set so switching presets
+                // always produces a deterministic sound (nothing "sticks" from the
+                // previous patch).
+                const base = {
+                    synthMode: 'waveform', waveform: 'sine', unison: '1', detune: '0',
+                    stereoSpread: '0.5', unisonBlend: '1', glideTime: '0',
+                    fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                    filterCutoff: '20000', filterResonance: '0', filterEnvAmount: '0',
+                    attack: '0.05', decay: '0.1', sustain: '0.5', release: '0.5',
+                    lfoToggle: false, lfoRate: '0', lfoAmount: '50',
+                    noiseToggle: false, noiseAmount: '0',
+                    masterVolume: '0.7', masterReverb: '0', masterDelay: '0',
+                    globalBpm: '138', delayDivision: '1/8D', delayFeedback: '0.45',
+                    chorusAmount: '0', driveAmount: '0',
+                    gateToggle: false, gateRate: '1/16', gateDepth: '1', gateSmooth: '0.01',
+                    sidechainToggle: false, sidechainAmount: '0.6', sidechainRelease: '0.25',
+                    kickToggle: false, kickLevel: '0.8',
+                    masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '0',
+                    __cthulhu: { enabled: false }
+                };
+                const p = (overrides) => Object.assign({}, base, overrides);
+
                 return {
-                    'Init': {
-                        synthMode: 'waveform', waveform: 'sine', unison: '1', detune: '0',
-                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
-                        filterCutoff: '20000', filterResonance: '0', filterEnvAmount: '0',
-                        attack: '0.05', decay: '0.1', sustain: '0.5', release: '0.5',
-                        lfoToggle: false, lfoRate: '0', lfoAmount: '50',
-                        noiseToggle: false, noiseAmount: '0',
-                        masterVolume: '0.7', masterReverb: '0', masterDelay: '0',
-                        masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '0'
-                    },
-                    'Warm Pad': {
-                        synthMode: 'waveform', waveform: 'sawtooth', unison: '4', detune: '25',
-                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                    'Init': p({}),
+                    'Warm Pad': p({
+                        waveform: 'sawtooth', unison: '4', detune: '25',
                         filterCutoff: '2000', filterResonance: '2', filterEnvAmount: '0.3',
                         attack: '0.8', decay: '0.5', sustain: '0.7', release: '1.5',
                         lfoToggle: true, lfoRate: '0.5', lfoAmount: '200',
-                        noiseToggle: false, noiseAmount: '0',
                         masterVolume: '0.6', masterReverb: '0.4', masterDelay: '0.2',
-                        masterLowEQ: '2', masterMidEQ: '0', masterHighEQ: '-2'
-                    },
-                    'Bright Lead': {
-                        synthMode: 'waveform', waveform: 'square', unison: '2', detune: '10',
-                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        globalBpm: '120',
+                        masterLowEQ: '2', masterHighEQ: '-2'
+                    }),
+                    'Bright Lead': p({
+                        waveform: 'square', unison: '2', detune: '10',
                         filterCutoff: '8000', filterResonance: '5', filterEnvAmount: '0.5',
                         attack: '0.01', decay: '0.2', sustain: '0.6', release: '0.3',
-                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
-                        noiseToggle: false, noiseAmount: '0',
                         masterVolume: '0.5', masterReverb: '0.1', masterDelay: '0.15',
-                        masterLowEQ: '0', masterMidEQ: '3', masterHighEQ: '2'
-                    },
-                    'Deep Bass': {
-                        synthMode: 'waveform', waveform: 'sawtooth', unison: '1', detune: '0',
-                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        globalBpm: '120',
+                        masterMidEQ: '3', masterHighEQ: '2'
+                    }),
+                    'Deep Bass': p({
+                        waveform: 'sawtooth',
                         filterCutoff: '500', filterResonance: '8', filterEnvAmount: '0.6',
                         attack: '0.01', decay: '0.3', sustain: '0.4', release: '0.2',
-                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
-                        noiseToggle: false, noiseAmount: '0',
-                        masterVolume: '0.7', masterReverb: '0', masterDelay: '0',
+                        globalBpm: '120',
                         masterLowEQ: '6', masterMidEQ: '-2', masterHighEQ: '-4'
-                    },
-                    'Pluck': {
-                        synthMode: 'waveform', waveform: 'triangle', unison: '2', detune: '5',
-                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                    }),
+                    'Pluck': p({
+                        waveform: 'triangle', unison: '2', detune: '5',
                         filterCutoff: '5000', filterResonance: '3', filterEnvAmount: '0.8',
                         attack: '0.001', decay: '0.4', sustain: '0', release: '0.3',
-                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
-                        noiseToggle: false, noiseAmount: '0',
                         masterVolume: '0.6', masterReverb: '0.25', masterDelay: '0.3',
-                        masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '0'
-                    },
-                    'FM Bell': {
-                        synthMode: 'waveform', waveform: 'sine', unison: '1', detune: '0',
-                        fmToggle: true, fmAmount: '400', filterToggle: true, filterType: 'lowpass',
-                        filterCutoff: '10000', filterResonance: '0', filterEnvAmount: '0',
+                        globalBpm: '120'
+                    }),
+                    'FM Bell': p({
+                        fmToggle: true, fmAmount: '400',
+                        filterCutoff: '10000',
                         attack: '0.001', decay: '1.5', sustain: '0', release: '2',
-                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
-                        noiseToggle: false, noiseAmount: '0',
                         masterVolume: '0.5', masterReverb: '0.5', masterDelay: '0.2',
-                        masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '4'
-                    },
-                    'Noise Sweep': {
-                        synthMode: 'waveform', waveform: 'sawtooth', unison: '3', detune: '30',
-                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'lowpass',
+                        globalBpm: '120',
+                        masterHighEQ: '4'
+                    }),
+                    'Noise Sweep': p({
+                        waveform: 'sawtooth', unison: '3', detune: '30',
                         filterCutoff: '1000', filterResonance: '10', filterEnvAmount: '0.7',
                         attack: '0.5', decay: '1', sustain: '0.5', release: '1',
                         lfoToggle: true, lfoRate: '2', lfoAmount: '500',
                         noiseToggle: true, noiseAmount: '0.15',
                         masterVolume: '0.5', masterReverb: '0.6', masterDelay: '0.4',
-                        masterLowEQ: '0', masterMidEQ: '0', masterHighEQ: '0'
-                    },
-                    'Better Off Alone': {
-                        synthMode: 'waveform', waveform: 'sawtooth', unison: '7', detune: '0',
-                        fmToggle: false, fmAmount: '0', filterToggle: true, filterType: 'highpass',
-                        filterCutoff: '300', filterResonance: '1', filterEnvAmount: '0',
+                        globalBpm: '120'
+                    }),
+                    'Better Off Alone': p({
+                        waveform: 'sawtooth', unison: '7',
+                        filterType: 'highpass', filterCutoff: '300', filterResonance: '1',
                         attack: '0', decay: '0.1', sustain: '1', release: '0.02',
-                        lfoToggle: false, lfoRate: '0', lfoAmount: '0',
-                        noiseToggle: false, noiseAmount: '0',
                         masterVolume: '0.5', masterReverb: '0.2', masterDelay: '0.08',
+                        globalBpm: '137',
                         masterLowEQ: '-4', masterMidEQ: '2', masterHighEQ: '3'
-                    }
+                    }),
+                    'Supersaw Anthem Lead': p({
+                        waveform: 'sawtooth', unison: '7', detune: '35',
+                        stereoSpread: '0.9', unisonBlend: '0.85',
+                        filterCutoff: '17350', filterResonance: '1', filterEnvAmount: '0.15',
+                        attack: '0.01', decay: '0.3', sustain: '0.8', release: '0.4',
+                        masterVolume: '0.5', masterReverb: '0.35', masterDelay: '0.3',
+                        delayDivision: '1/8D', delayFeedback: '0.5',
+                        chorusAmount: '0.25', driveAmount: '0.15',
+                        masterLowEQ: '-1', masterMidEQ: '1', masterHighEQ: '2.5'
+                    }),
+                    'Gated Pad': p({
+                        waveform: 'sawtooth', unison: '6', detune: '28',
+                        stereoSpread: '0.8',
+                        filterCutoff: '16000', filterResonance: '1',
+                        attack: '0.4', decay: '0.5', sustain: '0.8', release: '1.2',
+                        masterVolume: '0.55', masterReverb: '0.45', masterDelay: '0.2',
+                        chorusAmount: '0.35',
+                        gateToggle: true, gateRate: '1/16', gateDepth: '1', gateSmooth: '0.012',
+                        __gate: { pattern: [1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1] }
+                    }),
+                    'Trance Pluck': p({
+                        waveform: 'sawtooth', unison: '3', detune: '12',
+                        stereoSpread: '0.6',
+                        filterCutoff: '9860', filterResonance: '4', filterEnvAmount: '0.8',
+                        attack: '0.001', decay: '0.28', sustain: '0', release: '0.25',
+                        masterVolume: '0.6', masterReverb: '0.3', masterDelay: '0.35',
+                        delayDivision: '1/8D', delayFeedback: '0.55'
+                    }),
+                    'Acid 303': p({
+                        waveform: 'sawtooth', glideTime: '0.08',
+                        filterCutoff: '8690', filterResonance: '14', filterEnvAmount: '0.75',
+                        attack: '0.001', decay: '0.18', sustain: '0.1', release: '0.1',
+                        masterVolume: '0.55', masterReverb: '0.1', masterDelay: '0.2',
+                        globalBpm: '140', delayDivision: '1/16', delayFeedback: '0.35',
+                        driveAmount: '0.4'
+                    }),
+                    'Uplifting Arp': p({
+                        waveform: 'sawtooth', unison: '2', detune: '10',
+                        filterCutoff: '13340', filterResonance: '2', filterEnvAmount: '0.5',
+                        attack: '0.001', decay: '0.2', sustain: '0.2', release: '0.15',
+                        masterVolume: '0.55', masterReverb: '0.35', masterDelay: '0.4',
+                        delayDivision: '1/8D', delayFeedback: '0.55',
+                        sidechainToggle: true, kickToggle: true,
+                        __cthulhu: {
+                            enabled: true,
+                            arp: {
+                                latch: true, bpm: 138, rate: '1/16', length: 16, swing: 0, strum: 0,
+                                steps: [
+                                    { tones: [1], octave: 0, velocity: 1, gate: 0.6 },
+                                    { tones: [1], octave: 1, velocity: 0.7, gate: 0.5 },
+                                    { tones: [2], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [1], octave: 1, velocity: 0.7, gate: 0.5 },
+                                    { tones: [3], octave: 0, velocity: 1, gate: 0.6 },
+                                    { tones: [2], octave: 1, velocity: 0.7, gate: 0.5 },
+                                    { tones: [1], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [3], octave: 1, velocity: 0.7, gate: 0.5 },
+                                    { tones: [2], octave: 0, velocity: 1, gate: 0.6 },
+                                    { tones: [1], octave: 1, velocity: 0.7, gate: 0.5 },
+                                    { tones: [3], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [2], octave: 1, velocity: 0.7, gate: 0.5 },
+                                    { tones: [4], octave: 0, velocity: 1, gate: 0.6 },
+                                    { tones: [3], octave: 1, velocity: 0.7, gate: 0.5 },
+                                    { tones: [2], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [4], octave: 1, velocity: 0.7, gate: 0.5 }
+                                ]
+                            }
+                        }
+                    }),
+                    'Psy Offbeat Bass': p({
+                        waveform: 'sawtooth',
+                        filterCutoff: '7850', filterResonance: '2', filterEnvAmount: '0.3',
+                        attack: '0.002', decay: '0.15', sustain: '0.7', release: '0.08',
+                        masterVolume: '0.6', masterReverb: '0.05',
+                        globalBpm: '145', driveAmount: '0.3',
+                        sidechainToggle: true, sidechainAmount: '0.8', sidechainRelease: '0.2',
+                        kickToggle: true,
+                        masterLowEQ: '5', masterHighEQ: '-2'
+                    }),
+                    'Hoover': p({
+                        waveform: 'sawtooth', unison: '8', detune: '60',
+                        stereoSpread: '1',
+                        filterCutoff: '14510', filterResonance: '3', filterEnvAmount: '0.2',
+                        attack: '0.01', decay: '0.4', sustain: '0.9', release: '0.5',
+                        lfoToggle: true, lfoRate: '5.5', lfoAmount: '300',
+                        masterVolume: '0.45', masterReverb: '0.25', masterDelay: '0.15',
+                        globalBpm: '140', delayDivision: '1/8',
+                        chorusAmount: '0.5', driveAmount: '0.35'
+                    })
                 };
             },
 
@@ -1740,13 +1984,19 @@
                 const settings = {};
                 const controlIds = [
                     'synthMode', 'waveform', 'unison', 'detune', 'fmAmount',
+                    'stereoSpread', 'unisonBlend', 'glideTime',
                     'filterType', 'filterCutoff', 'filterResonance', 'filterEnvAmount',
                     'attack', 'decay', 'sustain', 'release',
                     'lfoRate', 'lfoAmount', 'noiseAmount',
                     'masterVolume', 'masterReverb', 'masterDelay',
+                    'globalBpm', 'delayDivision', 'delayFeedback',
+                    'chorusAmount', 'driveAmount',
+                    'gateRate', 'gateDepth', 'gateSmooth',
+                    'sidechainAmount', 'sidechainRelease', 'kickLevel',
                     'masterLowEQ', 'masterMidEQ', 'masterHighEQ'
                 ];
-                const checkboxIds = ['fmToggle', 'filterToggle', 'lfoToggle', 'noiseToggle'];
+                const checkboxIds = ['fmToggle', 'filterToggle', 'lfoToggle', 'noiseToggle',
+                    'gateToggle', 'sidechainToggle', 'kickToggle'];
 
                 controlIds.forEach(id => {
                     const el = document.getElementById(id);
@@ -1763,6 +2013,11 @@
                     settings.__cthulhu = Cthulhu.snapshot();
                 }
 
+                // Snapshot the trance gate pattern
+                if (typeof TranceGate !== 'undefined' && TranceGate.snapshot) {
+                    settings.__gate = TranceGate.snapshot();
+                }
+
                 return settings;
             },
 
@@ -1770,7 +2025,7 @@
                 if (!settings) return;
 
                 Object.entries(settings).forEach(([key, value]) => {
-                    if (key === '__cthulhu') return; // handled below
+                    if (key === '__cthulhu' || key === '__gate') return; // handled below
                     const el = document.getElementById(key);
                     if (!el) return;
 
@@ -1787,6 +2042,11 @@
                 // Restore Cthulhu state if present
                 if (settings.__cthulhu && typeof Cthulhu !== 'undefined' && Cthulhu.restore) {
                     Cthulhu.restore(settings.__cthulhu);
+                }
+
+                // Restore the trance gate pattern if present
+                if (settings.__gate && typeof TranceGate !== 'undefined' && TranceGate.restore) {
+                    TranceGate.restore(settings.__gate);
                 }
 
                 // Update all knob displays
@@ -1964,8 +2224,14 @@
                 const now = Synth.audioContext.currentTime;
 
                 const oscillators = [];
+                const unisonChains = []; // per-oscillator gain (blend) + panner (spread)
                 const unisonCount = parseInt(SynthState.controls.unison.value) || 1;
                 const detune = parseFloat(SynthState.controls.detune.value) || 0;
+                const spread = SynthState.controls.stereoSpread ? parseFloat(SynthState.controls.stereoSpread.value) : 0;
+                const blend = SynthState.controls.unisonBlend ? parseFloat(SynthState.controls.unisonBlend.value) : 1;
+                const glideTime = SynthState.controls.glideTime ? parseFloat(SynthState.controls.glideTime.value) : 0;
+                const glideFrom = (glideTime > 0.001 && SynthState.lastFrequency &&
+                    Math.abs(SynthState.lastFrequency - frequency) > 0.01) ? SynthState.lastFrequency : null;
                 const isWavetable = synthMode === 'wavetable' && SynthState.wavetable.periodicWave;
 
                 for (let i = 0; i < unisonCount; i++) {
@@ -1975,10 +2241,25 @@
                     } else {
                         osc.type = SynthState.controls.waveform.value;
                     }
-                    osc.frequency.setValueAtTime(frequency, now);
-                    const detuneAmount = unisonCount > 1 ? (i / (unisonCount - 1) - 0.5) * detune : 0;
-                    osc.detune.setValueAtTime(detuneAmount, now);
+                    if (glideFrom) {
+                        osc.frequency.setValueAtTime(glideFrom, now);
+                        osc.frequency.exponentialRampToValueAtTime(frequency, now + glideTime);
+                    } else {
+                        osc.frequency.setValueAtTime(frequency, now);
+                    }
+                    // offset: -0.5 (far left/low detune) .. +0.5 (far right/high detune)
+                    const offset = unisonCount > 1 ? (i / (unisonCount - 1) - 0.5) : 0;
+                    osc.detune.setValueAtTime(offset * detune, now);
+
+                    const oscGain = Synth.audioContext.createGain();
+                    oscGain.gain.setValueAtTime(1 - (1 - blend) * Math.min(1, Math.abs(offset) * 2), now);
+                    const oscPan = Synth.audioContext.createStereoPanner();
+                    oscPan.pan.setValueAtTime(Math.max(-1, Math.min(1, offset * 2 * spread)), now);
+                    osc.connect(oscGain);
+                    oscGain.connect(oscPan);
+
                     oscillators.push(osc);
+                    unisonChains.push({ gain: oscGain, pan: oscPan });
                 }
 
                 const gainNode = Synth.audioContext.createGain();
@@ -1991,14 +2272,19 @@
 
                 // Connect nodes based on filter state
                 if (SynthState.filterEnabled) {
-                    oscillators.forEach(osc => osc.connect(filter));
+                    unisonChains.forEach(c => c.pan.connect(filter));
                     filter.connect(gainNode);
                 } else {
-                    oscillators.forEach(osc => osc.connect(gainNode));
+                    unisonChains.forEach(c => c.pan.connect(gainNode));
                 }
 
                 const fmOsc = Synth.audioContext.createOscillator();
-                fmOsc.frequency.setValueAtTime(frequency * 2, now);
+                if (glideFrom) {
+                    fmOsc.frequency.setValueAtTime(glideFrom * 2, now);
+                    fmOsc.frequency.exponentialRampToValueAtTime(frequency * 2, now + glideTime);
+                } else {
+                    fmOsc.frequency.setValueAtTime(frequency * 2, now);
+                }
                 const fmGain = Synth.audioContext.createGain();
                 fmGain.gain.setValueAtTime(SynthState.fmEnabled ? parseFloat(SynthState.controls.fmAmount.value) : 0, now);
                 fmOsc.connect(fmGain);
@@ -2062,37 +2348,37 @@
                         filter.frequency.setValueAtTime(SynthState.filterSettings.frequency, now);
                         filter.Q.cancelScheduledValues(now);
                         filter.Q.setValueAtTime(SynthState.filterSettings.Q, now);
-
-                        oscillators.forEach(osc => {
-                            osc.disconnect();
-                            osc.connect(filter);
-                        });
                         filter.disconnect();
                         filter.connect(gainNode);
-                    } else {
-                        oscillators.forEach(osc => {
-                            osc.disconnect();
-                            osc.connect(gainNode);
-                        });
                     }
 
-                    // Update oscillators, unison, and detune
+                    // Update oscillators, unison, detune, spread and blend
                     const newUnisonCount = parseInt(SynthState.controls.unison.value) || 1;
                     const newDetune = parseFloat(SynthState.controls.detune.value) || 0;
+                    const newSpread = SynthState.controls.stereoSpread ? parseFloat(SynthState.controls.stereoSpread.value) : 0;
+                    const newBlend = SynthState.controls.unisonBlend ? parseFloat(SynthState.controls.unisonBlend.value) : 1;
                     const useWavetable = SynthState.controls.synthMode.value === 'wavetable' && SynthState.wavetable.periodicWave;
 
                     // Adjust the number of oscillators if unison has changed
                     while (oscillators.length < newUnisonCount) {
                         const newOsc = Synth.audioContext.createOscillator();
                         newOsc.frequency.setValueAtTime(frequency, now);
+                        const newGain = Synth.audioContext.createGain();
+                        const newPan = Synth.audioContext.createStereoPanner();
+                        newOsc.connect(newGain);
+                        newGain.connect(newPan);
                         newOsc.start(now);
                         fmGain.connect(newOsc.frequency);
                         oscillators.push(newOsc);
+                        unisonChains.push({ gain: newGain, pan: newPan });
                     }
                     while (oscillators.length > newUnisonCount) {
                         const oscToRemove = oscillators.pop();
+                        const chainToRemove = unisonChains.pop();
                         oscToRemove.stop(now);
                         oscToRemove.disconnect();
+                        chainToRemove.gain.disconnect();
+                        chainToRemove.pan.disconnect();
                     }
 
                     // Update each oscillator
@@ -2102,15 +2388,19 @@
                         } else {
                             osc.type = SynthState.controls.waveform.value;
                         }
-                        const detuneAmount = newUnisonCount > 1 ? (i / (newUnisonCount - 1) - 0.5) * newDetune : 0;
-                        osc.detune.setValueAtTime(detuneAmount, now);
+                        const offset = newUnisonCount > 1 ? (i / (newUnisonCount - 1) - 0.5) : 0;
+                        osc.detune.setValueAtTime(offset * newDetune, now);
 
-                        // Reconnect oscillator if filter state has changed
-                        osc.disconnect();
+                        const chain = unisonChains[i];
+                        chain.gain.gain.setValueAtTime(1 - (1 - newBlend) * Math.min(1, Math.abs(offset) * 2), now);
+                        chain.pan.pan.setValueAtTime(Math.max(-1, Math.min(1, offset * 2 * newSpread)), now);
+
+                        // Reconnect if filter state has changed
+                        chain.pan.disconnect();
                         if (SynthState.filterEnabled) {
-                            osc.connect(filter);
+                            chain.pan.connect(filter);
                         } else {
-                            osc.connect(gainNode);
+                            chain.pan.connect(gainNode);
                         }
                     });
 
@@ -2145,8 +2435,10 @@
                     }
                 };
 
+                SynthState.lastFrequency = frequency;
+
                 return {
-                    oscillators, gainNode, filter, fmOsc, fmGain, noiseOsc, noiseGain, lfo, lfoGain, updateVoice, updatePitchBend, pitchBend, frequency
+                    oscillators, unisonChains, gainNode, filter, fmOsc, fmGain, noiseOsc, noiseGain, lfo, lfoGain, updateVoice, updatePitchBend, pitchBend, frequency
                 };
             },
 
@@ -2278,6 +2570,12 @@
                             voice.oscillators.forEach(osc => {
                                 osc.stop();
                                 osc.disconnect();
+                            });
+                        }
+                        if (voice.unisonChains) {
+                            voice.unisonChains.forEach(c => {
+                                c.gain.disconnect();
+                                c.pan.disconnect();
                             });
                         }
                         if (voice.gainNode) voice.gainNode.disconnect();
@@ -2970,7 +3268,7 @@
                 this.stopArp();
                 if (snap.arp) {
                     C.arp.latch = !!snap.arp.latch;
-                    C.arp.bpm = snap.arp.bpm || 120;
+                    Tempo.set(snap.arp.bpm || Tempo.bpm);
                     C.arp.rate = snap.arp.rate || '1/16';
                     C.arp.length = snap.arp.length || 16;
                     C.arp.swing = snap.arp.swing || 0;
@@ -3055,7 +3353,7 @@
                     if (isNaN(v) || v < 40) v = 40;
                     if (v > 300) v = 300;
                     e.target.value = v;
-                    SynthState.cthulhu.arp.bpm = v;
+                    Tempo.set(v); // Cthulhu BPM is the global BPM
                 });
                 document.getElementById('cthulhuArpRate').addEventListener('change', (e) => {
                     SynthState.cthulhu.arp.rate = e.target.value;
@@ -3091,6 +3389,168 @@
                 window.addEventListener('blur', () => {
                     if (SynthState.cthulhu.enabled) this.panic();
                 });
+            }
+        };
+
+        // ─────────────────────────────────────────────────────────────
+        //  TRANCE GATE — 16-step rhythmic volume gate synced to BPM
+        // ─────────────────────────────────────────────────────────────
+        const TranceGate = {
+            pattern: [1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0],
+            cells: [],
+            step: 0,
+            timer: null,
+            nextStepTime: 0,
+            lastTarget: 1,
+
+            init() {
+                this.renderPattern();
+            },
+
+            renderPattern() {
+                const wrap = document.getElementById('gatePattern');
+                if (!wrap) return;
+                wrap.innerHTML = '';
+                this.cells = [];
+                this.pattern.forEach((on, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'gate-step' + (on ? ' gate-step-on' : '');
+                    cell.title = 'Step ' + (i + 1);
+                    cell.addEventListener('click', () => {
+                        this.pattern[i] = this.pattern[i] ? 0 : 1;
+                        cell.classList.toggle('gate-step-on', !!this.pattern[i]);
+                    });
+                    wrap.appendChild(cell);
+                    this.cells.push(cell);
+                });
+            },
+
+            setEnabled(on) {
+                if (on) this.start();
+                else this.stop();
+            },
+
+            start() {
+                if (!Synth.audioContext || !Synth.gateGain || this.timer) return;
+                this.step = 0;
+                this.lastTarget = 1;
+                this.nextStepTime = Synth.audioContext.currentTime + 0.05;
+                this.timer = setInterval(() => this.schedule(), 25);
+            },
+
+            stop() {
+                if (this.timer) {
+                    clearInterval(this.timer);
+                    this.timer = null;
+                }
+                if (Synth.audioContext && Synth.gateGain) {
+                    const now = Synth.audioContext.currentTime;
+                    Synth.gateGain.gain.cancelScheduledValues(now);
+                    Synth.gateGain.gain.setTargetAtTime(1, now, 0.01);
+                }
+                this.clearHighlight();
+            },
+
+            stepSec() {
+                const rate = SynthState.controls.gateRate ? SynthState.controls.gateRate.value : '1/16';
+                const stepsPerBar = { '1/8': 8, '1/16': 16, '1/32': 32 }[rate] || 16;
+                return Tempo.barSec() / stepsPerBar;
+            },
+
+            // Lookahead scheduler ("tale of two clocks"): timer wakes every 25ms
+            // and schedules gain automation up to 120ms ahead on the audio clock.
+            schedule() {
+                const ctx = Synth.audioContext;
+                while (this.nextStepTime < ctx.currentTime + 0.12) {
+                    const idx = this.step;
+                    const depth = parseFloat(SynthState.controls.gateDepth.value);
+                    const smooth = Math.max(0.001, parseFloat(SynthState.controls.gateSmooth.value));
+                    const target = this.pattern[idx] ? 1 : Math.max(0, 1 - depth);
+                    const g = Synth.gateGain.gain;
+                    const t = this.nextStepTime;
+                    g.setValueAtTime(this.lastTarget, t);
+                    g.linearRampToValueAtTime(target, t + smooth);
+                    this.lastTarget = target;
+
+                    const delayMs = Math.max(0, (t - ctx.currentTime) * 1000);
+                    setTimeout(() => { if (this.timer) this.highlight(idx); }, delayMs);
+
+                    this.step = (this.step + 1) % this.pattern.length;
+                    this.nextStepTime += this.stepSec();
+                }
+            },
+
+            highlight(idx) {
+                this.cells.forEach((c, i) => c.classList.toggle('gate-step-playing', i === idx));
+            },
+            clearHighlight() {
+                this.cells.forEach(c => c.classList.remove('gate-step-playing'));
+            },
+
+            snapshot() {
+                return { pattern: [...this.pattern] };
+            },
+            restore(snap) {
+                if (snap && Array.isArray(snap.pattern) && snap.pattern.length === this.pattern.length) {
+                    this.pattern = snap.pattern.map(v => (v ? 1 : 0));
+                    this.renderPattern();
+                }
+            }
+        };
+
+        // ─────────────────────────────────────────────────────────────
+        //  BEAT CLOCK — drives the sidechain pump and the kick generator,
+        //  one pulse per beat, synced to the global BPM
+        // ─────────────────────────────────────────────────────────────
+        const BeatClock = {
+            timer: null,
+            nextBeatTime: 0,
+
+            update() {
+                const c = SynthState.controls;
+                const needed = (c.sidechainToggle && c.sidechainToggle.checked) ||
+                    (c.kickToggle && c.kickToggle.checked);
+                if (needed) this.start();
+                else this.stop();
+            },
+
+            start() {
+                if (!Synth.audioContext || !Synth.sidechainGain || this.timer) return;
+                this.nextBeatTime = Synth.audioContext.currentTime + 0.05;
+                this.timer = setInterval(() => this.schedule(), 25);
+            },
+
+            stop() {
+                if (this.timer) {
+                    clearInterval(this.timer);
+                    this.timer = null;
+                }
+                if (Synth.audioContext && Synth.sidechainGain) {
+                    const now = Synth.audioContext.currentTime;
+                    Synth.sidechainGain.gain.cancelScheduledValues(now);
+                    Synth.sidechainGain.gain.setTargetAtTime(1, now, 0.02);
+                }
+            },
+
+            schedule() {
+                const ctx = Synth.audioContext;
+                const c = SynthState.controls;
+                while (this.nextBeatTime < ctx.currentTime + 0.12) {
+                    const t = this.nextBeatTime;
+                    const beat = Tempo.beatSec();
+                    if (c.sidechainToggle.checked) {
+                        const amount = parseFloat(c.sidechainAmount.value);
+                        const release = Math.min(parseFloat(c.sidechainRelease.value), beat * 0.9);
+                        const g = Synth.sidechainGain.gain;
+                        g.setValueAtTime(1, t);
+                        g.linearRampToValueAtTime(Math.max(0, 1 - amount), t + 0.02);
+                        g.linearRampToValueAtTime(1, t + 0.02 + release);
+                    }
+                    if (c.kickToggle.checked) {
+                        Synth.triggerKick(t);
+                    }
+                    this.nextBeatTime += beat;
+                }
             }
         };
 
@@ -3464,7 +3924,12 @@
             playbackAudio: null,
             playbackSource: null,
             masterReverb: null,
-            masterDelay: null,
+            pingPong: null,
+            chorus: null,
+            drive: null,
+            gateGain: null,
+            sidechainGain: null,
+            kickBus: null,
             masterLowEQ: null,
             masterMidEQ: null,
             masterHighEQ: null,
@@ -3497,9 +3962,26 @@
                 SynthState.controls = {
                     synthMode: document.getElementById('synthMode'),
                     whiteKeysOnlyToggle: document.getElementById('whiteKeysOnlyToggle'),
+                    globalBpm: document.getElementById('globalBpm'),
                     masterVolume: document.getElementById('masterVolume'),
                     masterReverb: document.getElementById('masterReverb'),
                     masterDelay: document.getElementById('masterDelay'),
+                    delayDivision: document.getElementById('delayDivision'),
+                    delayFeedback: document.getElementById('delayFeedback'),
+                    chorusAmount: document.getElementById('chorusAmount'),
+                    driveAmount: document.getElementById('driveAmount'),
+                    stereoSpread: document.getElementById('stereoSpread'),
+                    unisonBlend: document.getElementById('unisonBlend'),
+                    glideTime: document.getElementById('glideTime'),
+                    gateToggle: document.getElementById('gateToggle'),
+                    gateRate: document.getElementById('gateRate'),
+                    gateDepth: document.getElementById('gateDepth'),
+                    gateSmooth: document.getElementById('gateSmooth'),
+                    sidechainToggle: document.getElementById('sidechainToggle'),
+                    sidechainAmount: document.getElementById('sidechainAmount'),
+                    sidechainRelease: document.getElementById('sidechainRelease'),
+                    kickToggle: document.getElementById('kickToggle'),
+                    kickLevel: document.getElementById('kickLevel'),
                     masterLowEQ: document.getElementById('masterLowEQ'),
                     masterMidEQ: document.getElementById('masterMidEQ'),
                     masterHighEQ: document.getElementById('masterHighEQ'),
@@ -3596,10 +4078,16 @@
                 document.getElementById('decrementRange').addEventListener('click', () => this.decrementPitchBendRange());
 
                 // Setup initial control states
+                Tempo.set(SynthState.controls.globalBpm.value);
                 this.updateMasterVolume();
                 this.updateMasterReverb();
                 this.updateMasterDelay();
                 this.updateMasterEQ();
+                this.updateChorus();
+                this.updateDrive();
+
+                // Initialize the trance gate pattern UI
+                TranceGate.init();
 
                 // Initialize UI (piano was already created behind the start modal)
                 UI.initializeEventListeners();
@@ -3640,9 +4128,9 @@
                 this.masterGainNode.gain.setValueAtTime(0.7, this.audioContext.currentTime);
 
                 this.masterReverb = this.createReverbEffect();
-                const delayEffect = this.createDelayEffect();
-                this.masterDelay = delayEffect.delayNode;
-                this.delayFeedback = delayEffect.feedbackGain;
+                this.pingPong = this.createPingPongDelay();
+                this.drive = this.createDriveStage();
+                this.chorus = this.createChorusEffect();
                 this.masterLowEQ = this.audioContext.createBiquadFilter();
                 this.masterMidEQ = this.audioContext.createBiquadFilter();
                 this.masterHighEQ = this.audioContext.createBiquadFilter();
@@ -3657,27 +4145,40 @@
                 this.analyser = this.audioContext.createAnalyser();
                 this.analyser.fftSize = 2048;
 
+                // Trance gate chops the synth pre-effects; sidechain pumps the
+                // whole mix (reverb/delay tails included) at the end of the chain.
+                this.gateGain = this.audioContext.createGain();
+                this.sidechainGain = this.audioContext.createGain();
+                // Kick joins after the sidechain so it isn't ducked by its own pump
+                this.kickBus = this.audioContext.createGain();
+
                 // Create dry/wet gains for reverb and delay
                 this.reverbDry = this.audioContext.createGain();
                 this.reverbWet = this.audioContext.createGain();
+                this.delayBus = this.audioContext.createGain();
                 this.delayDry = this.audioContext.createGain();
                 this.delayWet = this.audioContext.createGain();
 
-                // Connect the nodes
+                // Connect the nodes:
+                // compressor → EQ → gate → drive → chorus → reverb → ping-pong delay → sidechain → master
                 this.compressor.connect(this.masterLowEQ);
                 this.masterLowEQ.connect(this.masterMidEQ);
                 this.masterMidEQ.connect(this.masterHighEQ);
-                this.masterHighEQ.connect(this.reverbDry);
-                this.masterHighEQ.connect(this.reverbWet);
+                this.masterHighEQ.connect(this.gateGain);
+                this.gateGain.connect(this.drive.input);
+                this.drive.output.connect(this.chorus.input);
+                this.chorus.output.connect(this.reverbDry);
+                this.chorus.output.connect(this.reverbWet);
                 this.reverbWet.connect(this.masterReverb);
-                this.masterReverb.connect(this.delayDry);
-                this.reverbDry.connect(this.delayDry);
-                this.delayDry.connect(this.delayWet);
-                this.delayWet.connect(this.masterDelay);
-                this.masterDelay.connect(this.delayFeedback);
-                this.delayFeedback.connect(this.masterDelay);
-                this.masterDelay.connect(this.masterGainNode);
-                this.delayDry.connect(this.masterGainNode);
+                this.masterReverb.connect(this.delayBus);
+                this.reverbDry.connect(this.delayBus);
+                this.delayBus.connect(this.delayDry);
+                this.delayDry.connect(this.sidechainGain);
+                this.delayBus.connect(this.delayWet);
+                this.delayWet.connect(this.pingPong.input);
+                this.pingPong.output.connect(this.sidechainGain);
+                this.sidechainGain.connect(this.masterGainNode);
+                this.kickBus.connect(this.masterGainNode);
                 this.masterGainNode.connect(this.analyser);
                 this.analyser.connect(this.audioContext.destination);
                 // Start the visualizer
@@ -3693,7 +4194,6 @@
                 this.masterHighEQ.frequency.value = 3000;
 
                 // Initialize delay
-                this.masterDelay.delayTime.value = 0.5;
                 this.delayWet.gain.value = 0;
                 this.delayDry.gain.value = 1;
 
@@ -3720,17 +4220,146 @@
                 return reverbNode;
             },
 
-            createDelayEffect() {
-                const delayNode = this.audioContext.createDelay(5.0);
-                const feedbackGain = this.audioContext.createGain();
+            // Stereo ping-pong delay: echoes alternate left/right, with a highpass
+            // in the feedback loop so the repeats don't pile up mud in the lows.
+            createPingPongDelay() {
+                const ctx = this.audioContext;
+                const input = ctx.createGain();
+                const delayL = ctx.createDelay(3.0);
+                const delayR = ctx.createDelay(3.0);
+                const feedback = ctx.createGain();
+                const feedbackHP = ctx.createBiquadFilter();
+                const panL = ctx.createStereoPanner();
+                const panR = ctx.createStereoPanner();
+                const output = ctx.createGain();
 
-                delayNode.delayTime.value = 0.5; // 500ms delay
-                feedbackGain.gain.value = 0.3; // 30% feedback
+                delayL.delayTime.value = 0.326; // dotted 8th at 138 BPM
+                delayR.delayTime.value = 0.326;
+                feedback.gain.value = 0.45;
+                feedbackHP.type = 'highpass';
+                feedbackHP.frequency.value = 180;
+                panL.pan.value = -0.85;
+                panR.pan.value = 0.85;
 
-                delayNode.connect(feedbackGain);
-                feedbackGain.connect(delayNode);
+                input.connect(delayL);
+                delayL.connect(panL);
+                panL.connect(output);
+                delayL.connect(delayR);
+                delayR.connect(panR);
+                panR.connect(output);
+                delayR.connect(feedback);
+                feedback.connect(feedbackHP);
+                feedbackHP.connect(delayL);
 
-                return { delayNode, feedbackGain };
+                return { input, output, delayL, delayR, feedback };
+            },
+
+            // Stereo chorus: two modulated delay lines panned apart, LFO phases inverted
+            createChorusEffect() {
+                const ctx = this.audioContext;
+                const input = ctx.createGain();
+                const output = ctx.createGain();
+                const dry = ctx.createGain();
+                const wet = ctx.createGain();
+                const delayL = ctx.createDelay(0.1);
+                const delayR = ctx.createDelay(0.1);
+                const panL = ctx.createStereoPanner();
+                const panR = ctx.createStereoPanner();
+                const lfo = ctx.createOscillator();
+                const depthL = ctx.createGain();
+                const depthR = ctx.createGain();
+
+                delayL.delayTime.value = 0.018;
+                delayR.delayTime.value = 0.026;
+                lfo.type = 'sine';
+                lfo.frequency.value = 0.6;
+                depthL.gain.value = 0.004;
+                depthR.gain.value = -0.005;
+                panL.pan.value = -0.7;
+                panR.pan.value = 0.7;
+                wet.gain.value = 0;
+                dry.gain.value = 1;
+
+                lfo.connect(depthL);
+                depthL.connect(delayL.delayTime);
+                lfo.connect(depthR);
+                depthR.connect(delayR.delayTime);
+                input.connect(dry);
+                dry.connect(output);
+                input.connect(delayL);
+                delayL.connect(panL);
+                panL.connect(wet);
+                input.connect(delayR);
+                delayR.connect(panR);
+                panR.connect(wet);
+                wet.connect(output);
+                lfo.start();
+
+                return { input, output, dry, wet };
+            },
+
+            // Soft-saturation drive: tanh waveshaper with variable pre-gain, dry/wet mixed
+            createDriveStage() {
+                const ctx = this.audioContext;
+                const input = ctx.createGain();
+                const output = ctx.createGain();
+                const dry = ctx.createGain();
+                const wet = ctx.createGain();
+                const pre = ctx.createGain();
+                const shaper = ctx.createWaveShaper();
+
+                const n = 1024;
+                const curve = new Float32Array(n);
+                for (let i = 0; i < n; i++) {
+                    const x = (i / (n - 1)) * 2 - 1;
+                    curve[i] = Math.tanh(3 * x) / Math.tanh(3);
+                }
+                shaper.curve = curve;
+                shaper.oversample = '4x';
+
+                pre.gain.value = 1;
+                wet.gain.value = 0;
+                dry.gain.value = 1;
+
+                input.connect(dry);
+                dry.connect(output);
+                input.connect(pre);
+                pre.connect(shaper);
+                shaper.connect(wet);
+                wet.connect(output);
+
+                return { input, output, dry, wet, pre };
+            },
+
+            // Synthesized four-on-the-floor kick: sine with a fast pitch drop plus a click
+            triggerKick(time) {
+                const ctx = this.audioContext;
+                const level = parseFloat(SynthState.controls.kickLevel.value) || 0;
+                if (level <= 0) return;
+
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, time);
+                osc.frequency.exponentialRampToValueAtTime(45, time + 0.07);
+                const gain = ctx.createGain();
+                gain.gain.setValueAtTime(level, time);
+                gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+
+                const click = ctx.createOscillator();
+                click.type = 'square';
+                click.frequency.setValueAtTime(1200, time);
+                const clickGain = ctx.createGain();
+                clickGain.gain.setValueAtTime(level * 0.15, time);
+                clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+
+                osc.connect(gain);
+                gain.connect(this.kickBus);
+                click.connect(clickGain);
+                clickGain.connect(this.kickBus);
+                osc.start(time);
+                osc.stop(time + 0.35);
+                click.start(time);
+                click.stop(time + 0.03);
             },
 
             incrementPitchBendRange() {
@@ -3773,18 +4402,48 @@
             },
 
             updateMasterDelay() {
-                const delayAmount = parseFloat(SynthState.controls.masterDelay.value);
-                const dryAmount = Math.cos(delayAmount * 0.5 * Math.PI);
-                const wetAmount = Math.sin(delayAmount * 0.5 * Math.PI);
+                const mix = parseFloat(SynthState.controls.masterDelay.value);
+                const dryAmount = Math.cos(mix * 0.5 * Math.PI);
+                const wetAmount = Math.sin(mix * 0.5 * Math.PI);
 
                 this.delayWet.gain.setTargetAtTime(wetAmount, this.audioContext.currentTime, 0.01);
                 this.delayDry.gain.setTargetAtTime(dryAmount, this.audioContext.currentTime, 0.01);
 
-                const delayTime = 0.1 + (delayAmount * 0.9);
-                this.masterDelay.delayTime.setTargetAtTime(delayTime, this.audioContext.currentTime, 0.01);
+                const feedback = parseFloat(SynthState.controls.delayFeedback.value);
+                this.pingPong.feedback.gain.setTargetAtTime(feedback, this.audioContext.currentTime, 0.01);
 
-                const feedback = delayAmount * 0.7;
-                this.delayFeedback.gain.setTargetAtTime(feedback, this.audioContext.currentTime, 0.01);
+                this.updateDelayTime();
+            },
+
+            // Note divisions in beats: dotted 8th (0.75) is THE trance delay
+            DELAY_DIV_BEATS: {
+                '1/4': 1, '1/8': 0.5, '1/8D': 0.75, '1/8T': 1 / 3,
+                '1/16': 0.25, '1/16D': 0.375, '1/16T': 1 / 6
+            },
+
+            updateDelayTime() {
+                if (!this.pingPong) return;
+                const div = SynthState.controls.delayDivision ? SynthState.controls.delayDivision.value : '1/8D';
+                const beats = this.DELAY_DIV_BEATS[div] || 0.75;
+                const t = Math.min(3, Tempo.beatSec() * beats);
+                this.pingPong.delayL.delayTime.setTargetAtTime(t, this.audioContext.currentTime, 0.05);
+                this.pingPong.delayR.delayTime.setTargetAtTime(t, this.audioContext.currentTime, 0.05);
+            },
+
+            updateChorus() {
+                const amount = parseFloat(SynthState.controls.chorusAmount.value);
+                const t = this.audioContext.currentTime;
+                this.chorus.wet.gain.setTargetAtTime(Math.sin(amount * 0.5 * Math.PI), t, 0.01);
+                this.chorus.dry.gain.setTargetAtTime(Math.cos(amount * 0.5 * Math.PI), t, 0.01);
+            },
+
+            updateDrive() {
+                const amount = parseFloat(SynthState.controls.driveAmount.value);
+                const t = this.audioContext.currentTime;
+                this.drive.pre.gain.setTargetAtTime(1 + amount * 12, t, 0.01);
+                // Wet tamed slightly as drive rises — tanh output sits near full scale
+                this.drive.wet.gain.setTargetAtTime(Math.sin(amount * 0.5 * Math.PI) * (1 - amount * 0.35), t, 0.01);
+                this.drive.dry.gain.setTargetAtTime(Math.cos(amount * 0.5 * Math.PI), t, 0.01);
             },
 
             updateMasterEQ() {
@@ -3799,8 +4458,18 @@
             updateParams(changedParam) {
                 if (changedParam === 'masterReverb') {
                     this.updateMasterReverb();
-                } else if (changedParam === 'masterDelay') {
+                } else if (changedParam === 'masterDelay' || changedParam === 'delayDivision' || changedParam === 'delayFeedback') {
                     this.updateMasterDelay();
+                } else if (changedParam === 'globalBpm') {
+                    Tempo.set(SynthState.controls.globalBpm.value);
+                } else if (changedParam === 'chorusAmount') {
+                    this.updateChorus();
+                } else if (changedParam === 'driveAmount') {
+                    this.updateDrive();
+                } else if (changedParam === 'gateToggle') {
+                    TranceGate.setEnabled(SynthState.controls.gateToggle.checked);
+                } else if (changedParam === 'sidechainToggle' || changedParam === 'kickToggle') {
+                    BeatClock.update();
                 } else if (changedParam === 'masterLowEQ' || changedParam === 'masterMidEQ' || changedParam === 'masterHighEQ') {
                     this.updateMasterEQ();
                 } else if (changedParam === 'pitchBendWheel') {
