@@ -416,6 +416,20 @@
                     </div>
                 </div>
                 <div class="control">
+                    <label for="fmToggle">FM On/Off</label>
+                    <input type="checkbox" id="fmToggle">
+                </div>
+                <div class="control">
+                    <label for="fmAmount">FM Amount</label>
+                    <div class="circular-control" data-unit="">
+                        <input type="range" id="fmAmount" min="0" max="1000" step="1" value="0">
+                        <span class="knob-value">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Unison</h2>
+                <div class="control">
                     <label for="unison">Unison</label>
                     <div class="circular-control" data-unit="x">
                         <input type="range" id="unison" min="1" max="8" step="1" value="1">
@@ -441,24 +455,6 @@
                     <div class="circular-control" data-unit="%">
                         <input type="range" id="unisonBlend" min="0" max="1" step="0.01" value="1">
                         <span class="knob-value">100%</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label for="glideTime">Glide</label>
-                    <div class="circular-control" data-unit="s" data-format="time">
-                        <input type="range" id="glideTime" min="0" max="0.5" step="0.005" value="0">
-                        <span class="knob-value">0ms</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label for="fmToggle">FM On/Off</label>
-                    <input type="checkbox" id="fmToggle">
-                </div>
-                <div class="control">
-                    <label for="fmAmount">FM Amount</label>
-                    <div class="circular-control" data-unit="">
-                        <input type="range" id="fmAmount" min="0" max="1000" step="1" value="0">
-                        <span class="knob-value">0</span>
                     </div>
                 </div>
             </div>
@@ -603,7 +599,14 @@
                 <h2>Miscellaneous</h2>
                 <div class="control">
                     <label for="whiteKeysOnlyToggle">White Keys Only</label>
-                    <input type="checkbox" id="whiteKeysOnlyToggle">
+                    <input type="checkbox" id="whiteKeysOnlyToggle" checked>
+                </div>
+                <div class="control">
+                    <label for="glideTime">Glide</label>
+                    <div class="circular-control" data-unit="s" data-format="time">
+                        <input type="range" id="glideTime" min="0" max="0.5" step="0.005" value="0">
+                        <span class="knob-value">0ms</span>
+                    </div>
                 </div>
                 <div class="control">
                     <label for="octaveShift">Octave Shift</label>
@@ -859,7 +862,7 @@
             fmEnabled: false,
             lfoEnabled: false,
             noiseEnabled: false,
-            whiteKeysOnly: false,
+            whiteKeysOnly: true,
             octaveShift: 0,
             arpeggiator: {
                 isOn: false,
@@ -1852,16 +1855,18 @@
                     }),
                     'Deep Bass': p({
                         waveform: 'sawtooth',
-                        filterCutoff: '500', filterResonance: '8', filterEnvAmount: '0.6',
-                        attack: '0.01', decay: '0.3', sustain: '0.4', release: '0.2',
+                        filterCutoff: '7850', filterResonance: '3', filterEnvAmount: '0.4',
+                        attack: '0.005', decay: '0.25', sustain: '0.5', release: '0.15',
+                        masterVolume: '0.65', driveAmount: '0.25',
                         globalBpm: '120',
-                        masterLowEQ: '6', masterMidEQ: '-2', masterHighEQ: '-4'
+                        masterLowEQ: '4', masterMidEQ: '-1', masterHighEQ: '-3'
                     }),
                     'Pluck': p({
                         waveform: 'triangle', unison: '2', detune: '5',
-                        filterCutoff: '5000', filterResonance: '3', filterEnvAmount: '0.8',
+                        filterCutoff: '10690', filterResonance: '3', filterEnvAmount: '0.8',
                         attack: '0.001', decay: '0.4', sustain: '0', release: '0.3',
-                        masterVolume: '0.6', masterReverb: '0.25', masterDelay: '0.3',
+                        masterVolume: '0.6', masterReverb: '0.25', masterDelay: '0.15',
+                        delayFeedback: '0.35',
                         globalBpm: '120'
                     }),
                     'FM Bell': p({
@@ -1894,8 +1899,8 @@
                         stereoSpread: '0.9', unisonBlend: '0.85',
                         filterCutoff: '17350', filterResonance: '1', filterEnvAmount: '0.15',
                         attack: '0.01', decay: '0.3', sustain: '0.8', release: '0.4',
-                        masterVolume: '0.5', masterReverb: '0.35', masterDelay: '0.3',
-                        delayDivision: '1/8D', delayFeedback: '0.5',
+                        masterVolume: '0.38', masterReverb: '0.35', masterDelay: '0.18',
+                        delayDivision: '1/8D', delayFeedback: '0.4',
                         chorusAmount: '0.25', driveAmount: '0.15',
                         masterLowEQ: '-1', masterMidEQ: '1', masterHighEQ: '2.5'
                     }),
@@ -1914,16 +1919,16 @@
                         stereoSpread: '0.6',
                         filterCutoff: '9860', filterResonance: '4', filterEnvAmount: '0.8',
                         attack: '0.001', decay: '0.28', sustain: '0', release: '0.25',
-                        masterVolume: '0.6', masterReverb: '0.3', masterDelay: '0.35',
-                        delayDivision: '1/8D', delayFeedback: '0.55'
+                        masterVolume: '0.6', masterReverb: '0.3', masterDelay: '0.22',
+                        delayDivision: '1/8D', delayFeedback: '0.4'
                     }),
                     'Acid 303': p({
                         waveform: 'sawtooth', glideTime: '0.08',
-                        filterCutoff: '8690', filterResonance: '14', filterEnvAmount: '0.75',
+                        filterCutoff: '8690', filterResonance: '9', filterEnvAmount: '0.6',
                         attack: '0.001', decay: '0.18', sustain: '0.1', release: '0.1',
-                        masterVolume: '0.55', masterReverb: '0.1', masterDelay: '0.2',
+                        masterVolume: '0.4', masterReverb: '0.1', masterDelay: '0.15',
                         globalBpm: '140', delayDivision: '1/16', delayFeedback: '0.35',
-                        driveAmount: '0.4'
+                        driveAmount: '0.25'
                     }),
                     'Uplifting Arp': p({
                         waveform: 'sawtooth', unison: '2', detune: '10',
@@ -1935,7 +1940,7 @@
                         __cthulhu: {
                             enabled: true,
                             arp: {
-                                latch: true, bpm: 138, rate: '1/16', length: 16, swing: 0, strum: 0,
+                                latch: false, bpm: 138, rate: '1/16', length: 16, swing: 0, strum: 0,
                                 steps: [
                                     { tones: [1], octave: 0, velocity: 1, gate: 0.6 },
                                     { tones: [1], octave: 1, velocity: 0.7, gate: 0.5 },
@@ -1959,13 +1964,13 @@
                     }),
                     'Psy Offbeat Bass': p({
                         waveform: 'sawtooth',
-                        filterCutoff: '7850', filterResonance: '2', filterEnvAmount: '0.3',
-                        attack: '0.002', decay: '0.15', sustain: '0.7', release: '0.08',
-                        masterVolume: '0.6', masterReverb: '0.05',
-                        globalBpm: '145', driveAmount: '0.3',
-                        sidechainToggle: true, sidechainAmount: '0.8', sidechainRelease: '0.2',
+                        filterCutoff: '7300', filterResonance: '2', filterEnvAmount: '0.3',
+                        attack: '0.001', decay: '0.12', sustain: '0.85', release: '0.06',
+                        masterVolume: '0.55', masterReverb: '0.05',
+                        globalBpm: '145', driveAmount: '0.35',
+                        sidechainToggle: true, sidechainAmount: '0.95', sidechainRelease: '0.22',
                         kickToggle: true,
-                        masterLowEQ: '5', masterHighEQ: '-2'
+                        masterLowEQ: '4', masterHighEQ: '-2'
                     }),
                     'Hoover': p({
                         waveform: 'sawtooth', unison: '8', detune: '60',
@@ -3540,11 +3545,17 @@
                     const beat = Tempo.beatSec();
                     if (c.sidechainToggle.checked) {
                         const amount = parseFloat(c.sidechainAmount.value);
-                        const release = Math.min(parseFloat(c.sidechainRelease.value), beat * 0.9);
+                        // Slam shut, hold at the bottom, then swoop back up late —
+                        // exponential rise from near-zero stays low most of the way
+                        // and jumps at the end, which is the classic hard pump.
+                        const dip = Math.max(0.001, 1 - amount);
+                        const hold = beat * 0.15;
+                        const rise = Math.max(0.05, Math.min(parseFloat(c.sidechainRelease.value), beat - hold - 0.02));
                         const g = Synth.sidechainGain.gain;
                         g.setValueAtTime(1, t);
-                        g.linearRampToValueAtTime(Math.max(0, 1 - amount), t + 0.02);
-                        g.linearRampToValueAtTime(1, t + 0.02 + release);
+                        g.linearRampToValueAtTime(dip, t + 0.008);
+                        g.setValueAtTime(dip, t + hold);
+                        g.exponentialRampToValueAtTime(1, t + hold + rise);
                     }
                     if (c.kickToggle.checked) {
                         Synth.triggerKick(t);
@@ -4151,6 +4162,19 @@
                 this.sidechainGain = this.audioContext.createGain();
                 // Kick joins after the sidechain so it isn't ducked by its own pump
                 this.kickBus = this.audioContext.createGain();
+                this.kickShaper = this.audioContext.createWaveShaper();
+                {
+                    const n = 1024;
+                    const curve = new Float32Array(n);
+                    for (let i = 0; i < n; i++) {
+                        const x = (i / (n - 1)) * 2 - 1;
+                        curve[i] = Math.tanh(2 * x) / Math.tanh(2);
+                    }
+                    this.kickShaper.curve = curve;
+                    this.kickShaper.oversample = '2x';
+                }
+                this.kickShaper.connect(this.kickBus);
+                this.kickNoiseBuffer = Util.createNoiseBuffer();
 
                 // Create dry/wet gains for reverb and delay
                 this.reverbDry = this.audioContext.createGain();
@@ -4331,7 +4355,8 @@
                 return { input, output, dry, wet, pre };
             },
 
-            // Synthesized four-on-the-floor kick: sine with a fast pitch drop plus a click
+            // Synthesized four-on-the-floor kick: saturated sine body with a
+            // two-stage pitch drop, plus a short filtered-noise beater tick
             triggerKick(time) {
                 const ctx = this.audioContext;
                 const level = parseFloat(SynthState.controls.kickLevel.value) || 0;
@@ -4339,27 +4364,33 @@
 
                 const osc = ctx.createOscillator();
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(150, time);
-                osc.frequency.exponentialRampToValueAtTime(45, time + 0.07);
+                osc.frequency.setValueAtTime(210, time);
+                osc.frequency.exponentialRampToValueAtTime(58, time + 0.03);
+                osc.frequency.exponentialRampToValueAtTime(42, time + 0.12);
                 const gain = ctx.createGain();
-                gain.gain.setValueAtTime(level, time);
-                gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+                gain.gain.setValueAtTime(0, time);
+                gain.gain.linearRampToValueAtTime(level * 1.2, time + 0.004);
+                gain.gain.exponentialRampToValueAtTime(level * 0.4, time + 0.12);
+                gain.gain.exponentialRampToValueAtTime(0.001, time + 0.45);
 
-                const click = ctx.createOscillator();
-                click.type = 'square';
-                click.frequency.setValueAtTime(1200, time);
-                const clickGain = ctx.createGain();
-                clickGain.gain.setValueAtTime(level * 0.15, time);
-                clickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.02);
+                const noise = ctx.createBufferSource();
+                noise.buffer = this.kickNoiseBuffer;
+                const noiseFilter = ctx.createBiquadFilter();
+                noiseFilter.type = 'lowpass';
+                noiseFilter.frequency.value = 4000;
+                const noiseGain = ctx.createGain();
+                noiseGain.gain.setValueAtTime(level * 0.5, time);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.012);
 
                 osc.connect(gain);
-                gain.connect(this.kickBus);
-                click.connect(clickGain);
-                clickGain.connect(this.kickBus);
+                gain.connect(this.kickShaper); // saturation gives the body its weight
+                noise.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(this.kickBus);
                 osc.start(time);
-                osc.stop(time + 0.35);
-                click.start(time);
-                click.stop(time + 0.03);
+                osc.stop(time + 0.5);
+                noise.start(time);
+                noise.stop(time + 0.03);
             },
 
             incrementPitchBendRange() {
