@@ -161,7 +161,6 @@
     </div>
 
     <div id="synth-container">
-        <h1>Browsynth</h1>
         <div id="synth-content">
             <div id="piano-and-pitch-bend">
                 <div id="piano"></div>
@@ -189,6 +188,10 @@
         </div>
         <canvas id="visualizer"></canvas>
         <div id="recorder-controls">
+            <label class="bpm-inline" title="Global tempo — delay, gate, pump, kick &amp; Cthulhu all sync to it">BPM
+                <input type="number" id="globalBpm" min="40" max="300" value="138" class="bpm-input">
+            </label>
+            <span class="control-separator"></span>
             <button id="recordButton" class="control-button" title="Record">
                 <i class="fas fa-microphone"></i>
             </button>
@@ -235,155 +238,6 @@
         </div>
         <div id="controls">
             <div class="control-group">
-                <h2>Master</h2>
-                <div class="control">
-                    <label for="globalBpm">BPM</label>
-                    <input type="number" id="globalBpm" min="40" max="300" value="138" class="bpm-input">
-                </div>
-                <div class="control">
-                    <label for="masterVolume">Volume</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.7">
-                        <span class="knob-value">70%</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label for="masterReverb">Reverb</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="masterReverb" min="0" max="1" step="0.01" value="0">
-                        <span class="knob-value">0%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="control-group">
-                <h2>Delay</h2>
-                <div class="control">
-                    <label for="masterDelay">Mix</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="masterDelay" min="0" max="1" step="0.01" value="0">
-                        <span class="knob-value">0%</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label for="delayDivision">Sync</label>
-                    <select id="delayDivision">
-                        <option value="1/4">1/4</option>
-                        <option value="1/8">1/8</option>
-                        <option value="1/8D" selected>1/8 Dotted</option>
-                        <option value="1/8T">1/8 Triplet</option>
-                        <option value="1/16">1/16</option>
-                        <option value="1/16D">1/16 Dotted</option>
-                        <option value="1/16T">1/16 Triplet</option>
-                    </select>
-                </div>
-                <div class="control">
-                    <label for="delayFeedback">Feedback</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="delayFeedback" min="0" max="0.85" step="0.01" value="0.45">
-                        <span class="knob-value">45%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="control-group">
-                <h2>Chorus &amp; Drive</h2>
-                <div class="control">
-                    <label for="chorusAmount">Chorus</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="chorusAmount" min="0" max="1" step="0.01" value="0">
-                        <span class="knob-value">0%</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label for="driveAmount">Drive</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="driveAmount" min="0" max="1" step="0.01" value="0">
-                        <span class="knob-value">0%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="control-group">
-                <h2>Trance Gate</h2>
-                <div class="control">
-                    <label for="gateToggle">Gate On/Off</label>
-                    <input type="checkbox" id="gateToggle">
-                </div>
-                <div class="control">
-                    <label for="gateRate">Rate</label>
-                    <select id="gateRate">
-                        <option value="1/8">1/8</option>
-                        <option value="1/16" selected>1/16</option>
-                        <option value="1/32">1/32</option>
-                    </select>
-                </div>
-                <div class="control">
-                    <label for="gateDepth">Depth</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="gateDepth" min="0" max="1" step="0.01" value="1">
-                        <span class="knob-value">100%</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label for="gateSmooth">Smooth</label>
-                    <div class="circular-control" data-unit="s" data-format="time">
-                        <input type="range" id="gateSmooth" min="0.001" max="0.05" step="0.001" value="0.01">
-                        <span class="knob-value">10ms</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label>Pattern</label>
-                    <div class="gate-pattern" id="gatePattern"></div>
-                </div>
-            </div>
-            <div class="control-group">
-                <h2>Sidechain</h2>
-                <div class="control">
-                    <label for="sidechainToggle">Pump On/Off</label>
-                    <input type="checkbox" id="sidechainToggle">
-                </div>
-                <div class="control">
-                    <label for="sidechainAmount">Amount</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="sidechainAmount" min="0" max="1" step="0.01" value="0.6">
-                        <span class="knob-value">60%</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label for="sidechainRelease">Release</label>
-                    <div class="circular-control" data-unit="s" data-format="time">
-                        <input type="range" id="sidechainRelease" min="0.05" max="0.6" step="0.01" value="0.25">
-                        <span class="knob-value">250ms</span>
-                    </div>
-                </div>
-                <div class="control">
-                    <label for="kickToggle">Kick On/Off</label>
-                    <input type="checkbox" id="kickToggle">
-                </div>
-                <div class="control">
-                    <label for="kickLevel">Kick Level</label>
-                    <div class="circular-control" data-unit="%">
-                        <input type="range" id="kickLevel" min="0" max="1" step="0.01" value="0.8">
-                        <span class="knob-value">80%</span>
-                    </div>
-                </div>
-            </div>
-            <div class="control-group eq-group">
-                <h2>EQ</h2>
-                <div class="eq-controls">
-                    <div class="eq-control">
-                        <label for="masterLowEQ">Low</label>
-                        <input type="range" id="masterLowEQ" min="-12" max="12" step="0.1" value="0" class="eq-slider">
-                    </div>
-                    <div class="eq-control">
-                        <label for="masterMidEQ">Mid</label>
-                        <input type="range" id="masterMidEQ" min="-12" max="12" step="0.1" value="0" class="eq-slider">
-                    </div>
-                    <div class="eq-control">
-                        <label for="masterHighEQ">High</label>
-                        <input type="range" id="masterHighEQ" min="-12" max="12" step="0.1" value="0" class="eq-slider">
-                    </div>
-                </div>
-            </div>
-            <div class="control-group">
                 <h2>Oscillator</h2>
                 <div class="control">
                     <label for="synthMode">Mode</label>
@@ -416,7 +270,7 @@
                     </div>
                 </div>
                 <div class="control">
-                    <label for="fmToggle">FM On/Off</label>
+                    <label for="fmToggle">FM</label>
                     <input type="checkbox" id="fmToggle">
                 </div>
                 <div class="control">
@@ -461,11 +315,11 @@
             <div class="control-group">
                 <h2>Filter</h2>
                 <div class="control">
-                    <label for="filterToggle">Filter On/Off</label>
+                    <label for="filterToggle">On</label>
                     <input type="checkbox" id="filterToggle" checked>
                 </div>
                 <div class="control">
-                    <label for="filterType">Filter Type</label>
+                    <label for="filterType">Type</label>
                     <select id="filterType">
                         <option value="lowpass">Lowpass</option>
                         <option value="highpass">Highpass</option>
@@ -528,7 +382,7 @@
             <div class="control-group">
                 <h2>LFO</h2>
                 <div class="control">
-                    <label for="lfoToggle">LFO On/Off</label>
+                    <label for="lfoToggle">On</label>
                     <input type="checkbox" id="lfoToggle">
                 </div>
                 <div class="control">
@@ -549,7 +403,7 @@
             <div class="control-group">
                 <h2>Noise</h2>
                 <div class="control">
-                    <label for="noiseToggle">Noise On/Off</label>
+                    <label for="noiseToggle">On</label>
                     <input type="checkbox" id="noiseToggle">
                 </div>
                 <div class="control">
@@ -563,7 +417,7 @@
             <div class="control-group">
                 <h2>Arpeggiator</h2>
                 <div class="control">
-                    <label for="arpToggle">Arp On/Off</label>
+                    <label for="arpToggle">On</label>
                     <input type="checkbox" id="arpToggle">
                 </div>
                 <div class="control">
@@ -592,6 +446,151 @@
                     <div class="circular-control" data-unit="x">
                         <input type="range" id="arpSpeed" min="1" max="8" step="1" value="4">
                         <span class="knob-value">4x</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Trance Gate</h2>
+                <div class="control">
+                    <label for="gateToggle">On</label>
+                    <input type="checkbox" id="gateToggle">
+                </div>
+                <div class="control">
+                    <label for="gateRate">Rate</label>
+                    <select id="gateRate">
+                        <option value="1/8">1/8</option>
+                        <option value="1/16" selected>1/16</option>
+                        <option value="1/32">1/32</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="gateDepth">Depth</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="gateDepth" min="0" max="1" step="0.01" value="1">
+                        <span class="knob-value">100%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="gateSmooth">Smooth</label>
+                    <div class="circular-control" data-unit="s" data-format="time">
+                        <input type="range" id="gateSmooth" min="0.001" max="0.05" step="0.001" value="0.01">
+                        <span class="knob-value">10ms</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label>Pattern</label>
+                    <div class="gate-pattern" id="gatePattern"></div>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Sidechain</h2>
+                <div class="control">
+                    <label for="sidechainToggle">Pump</label>
+                    <input type="checkbox" id="sidechainToggle">
+                </div>
+                <div class="control">
+                    <label for="kickToggle">Kick</label>
+                    <input type="checkbox" id="kickToggle">
+                </div>
+                <div class="control">
+                    <label for="sidechainAmount">Amount</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="sidechainAmount" min="0" max="1" step="0.01" value="0.6">
+                        <span class="knob-value">60%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="sidechainRelease">Release</label>
+                    <div class="circular-control" data-unit="s" data-format="time">
+                        <input type="range" id="sidechainRelease" min="0.05" max="0.6" step="0.01" value="0.25">
+                        <span class="knob-value">250ms</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="kickLevel">Kick Level</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="kickLevel" min="0" max="1" step="0.01" value="0.8">
+                        <span class="knob-value">80%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Delay</h2>
+                <div class="control">
+                    <label for="masterDelay">Mix</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="masterDelay" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="delayFeedback">Feedback</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="delayFeedback" min="0" max="0.85" step="0.01" value="0.45">
+                        <span class="knob-value">45%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="delayDivision">Sync</label>
+                    <select id="delayDivision">
+                        <option value="1/4">1/4</option>
+                        <option value="1/8">1/8</option>
+                        <option value="1/8D" selected>1/8 Dotted</option>
+                        <option value="1/8T">1/8 Triplet</option>
+                        <option value="1/16">1/16</option>
+                        <option value="1/16D">1/16 Dotted</option>
+                        <option value="1/16T">1/16 Triplet</option>
+                    </select>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Chorus &amp; Drive</h2>
+                <div class="control">
+                    <label for="chorusAmount">Chorus</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="chorusAmount" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="driveAmount">Drive</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="driveAmount" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="control-group eq-group">
+                <h2>EQ</h2>
+                <div class="eq-controls">
+                    <div class="eq-control">
+                        <label for="masterLowEQ">Low</label>
+                        <input type="range" id="masterLowEQ" min="-12" max="12" step="0.1" value="0" class="eq-slider">
+                    </div>
+                    <div class="eq-control">
+                        <label for="masterMidEQ">Mid</label>
+                        <input type="range" id="masterMidEQ" min="-12" max="12" step="0.1" value="0" class="eq-slider">
+                    </div>
+                    <div class="eq-control">
+                        <label for="masterHighEQ">High</label>
+                        <input type="range" id="masterHighEQ" min="-12" max="12" step="0.1" value="0" class="eq-slider">
+                    </div>
+                </div>
+            </div>
+            <div class="control-group">
+                <h2>Master</h2>
+                <div class="control">
+                    <label for="masterVolume">Volume</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="masterVolume" min="0" max="1" step="0.01" value="0.7">
+                        <span class="knob-value">70%</span>
+                    </div>
+                </div>
+                <div class="control">
+                    <label for="masterReverb">Reverb</label>
+                    <div class="circular-control" data-unit="%">
+                        <input type="range" id="masterReverb" min="0" max="1" step="0.01" value="0">
+                        <span class="knob-value">0%</span>
                     </div>
                 </div>
             </div>
@@ -3825,6 +3824,29 @@
                 document.querySelectorAll('.circular-control').forEach(control => {
                     control.addEventListener('mousedown', this.handleCircularControlInteraction);
                     control.addEventListener('touchstart', this.handleCircularControlInteraction, { passive: false });
+
+                    // Scroll to nudge (Shift for fine steps), double-click to reset
+                    control.addEventListener('wheel', (e) => {
+                        e.preventDefault();
+                        const input = control.querySelector('input[type="range"]');
+                        const min = parseFloat(input.min);
+                        const max = parseFloat(input.max);
+                        const step = parseFloat(input.step) || 1;
+                        const coarse = Math.max(step, (max - min) / 40);
+                        const delta = (e.deltaY < 0 ? 1 : -1) * (e.shiftKey ? step : coarse);
+                        let v = parseFloat(input.value) + delta;
+                        v = Math.round((v - min) / step) * step + min;
+                        input.value = Math.max(min, Math.min(max, v));
+                        Synth.updateParams();
+                        input.dispatchEvent(new Event('input'));
+                    }, { passive: false });
+
+                    control.addEventListener('dblclick', () => {
+                        const input = control.querySelector('input[type="range"]');
+                        input.value = input.defaultValue;
+                        Synth.updateParams();
+                        input.dispatchEvent(new Event('input'));
+                    });
                 });
 
                 const toggleVisualizerButton = document.getElementById('toggleVisualizer');

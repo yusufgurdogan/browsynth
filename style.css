@@ -73,6 +73,7 @@ body {
   display: flex;
   justify-content: space-between;
   margin-bottom: 10px;
+  width: 100%;
 }
 
 .eq-control {
@@ -266,30 +267,34 @@ body {
   margin-bottom: 20px;
 }
 
-h1 {
-  text-align: center;
-  color: #00ff9d;
-  margin-bottom: 20px;
-}
-
 #controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
 .control-group {
   background-color: #333;
   border-radius: 5px;
-  padding: 15px;
+  padding: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  justify-content: center;
+  gap: 0 12px;
 }
 
 .control-group h2 {
-  font-size: 18px;
-  margin-top: 0;
-  margin-bottom: 15px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #444;
   color: #00ff9d;
+  width: 100%;
 }
 
 .control {
@@ -299,19 +304,37 @@ h1 {
 
 .control label {
   display: block;
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #9fb5aa;
   text-transform: uppercase;
 }
 
+/* Inside the main panel grid, controls flow two-per-row so panels stay short */
+#controls .control {
+  margin-bottom: 18px;
+  flex: 1 1 40%;
+  min-width: 78px;
+}
+
+/* Rows that need the full panel width */
+#controls .control:has(select),
+#controls .control:has(input[type="file"]),
+#controls .control:has(.gate-pattern),
+#controls .control:has(.tuning-buttons),
+#controls #wavetableControls {
+  flex-basis: 100%;
+}
+
 .circular-control {
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
   margin: 0 auto;
   background-color: #4a4a4a;
   border-radius: 50%;
   position: relative;
-  cursor: pointer;
+  cursor: ns-resize;
   touch-action: none;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -4px 4px rgba(0, 0, 0, 0.2),
     inset 0 4px 4px rgba(255, 255, 255, 0.1);
@@ -329,8 +352,8 @@ h1 {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 70px;
-  height: 70px;
+  width: 54px;
+  height: 54px;
   background-color: #2a2a2a;
   border-radius: 50%;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -341,7 +364,7 @@ h1 {
   position: absolute;
   top: 10%;
   left: 50%;
-  width: 4px;
+  width: 3px;
   height: 40%;
   background-color: #00ff9d;
   transform-origin: bottom;
@@ -372,6 +395,10 @@ select {
   cursor: pointer;
 }
 
+.key:hover {
+  background-color: #c8f5de;
+}
+
 .key.black {
   width: 20px;
   height: 80px;
@@ -381,7 +408,12 @@ select {
   position: relative;
 }
 
-.key.active {
+.key.black:hover {
+  background-color: #24352c;
+}
+
+.key.active,
+.key.black.active {
   background-color: #00ff9d;
 }
 
@@ -443,16 +475,66 @@ select {
   cursor: pointer;
 }
 
+.bpm-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #9fb5aa;
+}
+
 .bpm-input {
-  width: 80px;
-  padding: 8px;
-  background-color: #4a4a4a;
-  border: 1px solid #333;
+  width: 64px;
+  padding: 7px 4px;
+  background-color: #2a2a2a;
+  border: 1px solid #4a4a4a;
   border-radius: 5px;
   color: #00ff9d;
   font-size: 16px;
   font-weight: bold;
   text-align: center;
+}
+
+/* Checkbox toggles in the control panels become switches */
+.control > input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: block;
+  margin: 4px auto 0;
+  width: 42px;
+  height: 22px;
+  border-radius: 11px;
+  background-color: #2a2a2a;
+  border: 1px solid #4a4a4a;
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.control > input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #888;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.control > input[type="checkbox"]:checked {
+  background-color: #005c39;
+  border-color: #00ff9d;
+}
+
+.control > input[type="checkbox"]:checked::before {
+  transform: translateX(20px);
+  background-color: #00ff9d;
+  box-shadow: 0 0 6px rgba(0, 255, 157, 0.6);
 }
 
 .gate-pattern {
@@ -557,7 +639,7 @@ select {
 /* Knob value display */
 .knob-value {
   position: absolute;
-  bottom: -20px;
+  bottom: -16px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 10px;
