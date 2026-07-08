@@ -14,6 +14,7 @@ a browser-based synth. no install, just open and play.
 - sidechain pump + built-in four-on-the-floor kick to jam over
 - global BPM that delay, gate, pump, kick and Cthulhu all sync to
 - arpeggiator with different patterns
+- Cthulhu step arpeggiator with trance pattern presets (deadmau5-style 6-step rollers, psy offbeat bass, rolling bass, offbeat stabs...)
 - **microtonal support!** 12, 13, 17, 24-tone scales via IPFS tuning files
 - custom .tun file import
 - visualizer (lissajous is beautiful btw)
