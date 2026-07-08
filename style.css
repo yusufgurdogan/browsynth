@@ -62,24 +62,6 @@ body {
   cursor: pointer;
 }
 
-.vertical-slider::-webkit-slider-thumb,
-.vertical-slider::-moz-range-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 20px;
-  height: 20px;
-  background: #00ff9d;
-  cursor: pointer;
-  border-radius: 50%;
-  box-shadow: 0 0 5px rgba(0, 255, 157, 0.5);
-}
-
-.vertical-slider::-webkit-slider-thumb:hover,
-.vertical-slider::-moz-range-thumb:hover {
-  background: #00cc7d;
-  box-shadow: 0 0 8px rgba(0, 255, 157, 0.7);
-}
-
 .eq-group {
   width: auto;
   padding: 15px;
@@ -160,7 +142,11 @@ body {
   box-shadow: 0 0 5px rgba(0, 255, 157, 0.5);
 }
 
-#pitchBendWheel::-webkit-slider-thumb:hover,
+#pitchBendWheel::-webkit-slider-thumb:hover {
+  background: #00cc7d;
+  box-shadow: 0 0 8px rgba(0, 255, 157, 0.7);
+}
+
 #pitchBendWheel::-moz-range-thumb:hover {
   background: #00cc7d;
   box-shadow: 0 0 8px rgba(0, 255, 157, 0.7);
@@ -215,16 +201,6 @@ body {
   display: inline-block;
   outline: none;
   box-sizing: border-box;
-}
-
-#recorder-controls {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  background-color: #333;
-  padding: 10px;
-  border-radius: 5px;
 }
 
 .control-button {
@@ -544,10 +520,6 @@ select {
   z-index: 10;
 }
 
-.circular-control {
-  position: relative;
-}
-
 /* Preset controls */
 #presetSelect {
   background-color: #4a4a4a;
@@ -603,7 +575,6 @@ select {
   cursor: not-allowed;
 }
 
-/* Recorder controls layout adjustment */
 #recorder-controls {
   display: flex;
   justify-content: center;

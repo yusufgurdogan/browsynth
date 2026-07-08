@@ -516,8 +516,6 @@
 
         // Synth configuration object
         const SynthConfig = {
-            waveforms: ['sine', 'square', 'sawtooth', 'triangle'],
-            filterTypes: ['lowpass', 'highpass', 'bandpass'],
             notes: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
             whiteNotes: ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
             blackNotes: ['C#', 'D#', 'F#', 'G#', 'A#'],
@@ -560,7 +558,7 @@
                 'z': 'C3', 'x': 'D3', 'c': 'E3', 'v': 'F3', 'b': 'G3', 'n': 'A3', 'm': 'B3', ',': 'C4', 'ö': 'C4', '.': 'D4', 'ç': 'D4', '/': 'E4',
                 'a': 'C4', 's': 'D4', 'd': 'E4', 'f': 'F4', 'g': 'G4', 'h': 'A4', 'j': 'B4', 'k': 'C5', 'l': 'D5', ';': 'E5', 'ş': 'E5', "'": 'F5', 'i': 'F5',
                 'q': 'C5', 'w': 'D5', 'e': 'E5', 'r': 'F5', 't': 'G5', 'y': 'A5', 'u': 'B5', 'ı': 'C6', 'o': 'D6', 'p': 'E6', '[': 'F6', 'ğ': 'F6', ']': 'G6', 'ü': 'G6',
-                '1': 'C6', '2': 'D6', '3': 'E6', '4': 'F6', '5': 'G6', '6': 'A6', '7': 'B6', '8': 'C7', '9': 'D7', '0': 'E7', '-': 'F7', '*': 'F7', '=': 'G7', '-': 'G7',
+                '1': 'C6', '2': 'D6', '3': 'E6', '4': 'F6', '5': 'G6', '6': 'A6', '7': 'B6', '8': 'C7', '9': 'D7', '0': 'E7', '*': 'F7', '=': 'G7', '-': 'G7',
 
                 'numpad0': 'G3', 'numpadinsert': 'G3',
                 'numpaddelete': 'A3', 'numpad,': 'A3',
@@ -598,56 +596,48 @@
         const TuningSystem = {
             frequencies: new Array(128).fill(null),
             isCustomTuning: false,
-            // Update the parseTunFile method in TuningSystem
+            // Parse an AnaMark .tun file. When scaleType is given (built-in presets),
+            // an equal-tempered scale is generated from the preset's step count;
+            // otherwise the file's own cent values are used.
             parseTunFile(content, scaleType) {
-                console.log('Parsing tuning file...');
                 const lines = content.split('\n');
                 const frequencies = new Array(128).fill(null);
 
                 // Reference C4 = 261.63 Hz (MIDI note 60)
                 const MIDDLE_C = 261.63;
-                const OCTAVE_RATIO = 2;
+                const C4_INDEX = 60;
 
-                // Set steps per octave based on scale type
                 const STEPS_PER_OCTAVE = {
                     '17-tone': 17,
                     '13-tone': 13,
                     '24-tone': 24
-                }[scaleType] || 12; // default to 12 if scale type not found
+                }[scaleType] || 12;
 
-                const STEP_RATIO = Math.pow(OCTAVE_RATIO, 1 / STEPS_PER_OCTAVE);
+                const STEP_RATIO = Math.pow(2, 1 / STEPS_PER_OCTAVE);
 
-                const c4Index = 60;  // MIDI note number for C4
-
-                lines.forEach((line, index) => {
+                lines.forEach(line => {
                     line = line.trim();
+                    if (!line.startsWith('note ')) return;
 
-                    if (line.startsWith('note ')) {
-                        const parts = line.split('=');
-                        if (parts.length !== 2) return;
+                    const parts = line.split('=');
+                    if (parts.length !== 2) return;
 
-                        const noteNumber = parseInt(parts[0].replace('note ', ''));
-                        let value = parseFloat(parts[1].trim());
+                    const noteNumber = parseInt(parts[0].replace('note ', ''));
+                    const value = parseFloat(parts[1].trim());
 
-                        if (!isNaN(noteNumber) && !isNaN(value) && noteNumber >= 0 && noteNumber < 128) {
-                            // Calculate steps from C4
-                            const stepsFromC4 = noteNumber - c4Index;
-
-                            // Calculate the frequency relative to C4
-                            const scaledFreq = MIDDLE_C * Math.pow(STEP_RATIO, stepsFromC4);
-
-                            frequencies[noteNumber] = scaledFreq;
-                            console.log(`Setting note ${noteNumber} to ${scaledFreq}Hz (scaled from ${value}Hz)`);
+                    if (!isNaN(noteNumber) && !isNaN(value) && noteNumber >= 0 && noteNumber < 128) {
+                        if (scaleType) {
+                            frequencies[noteNumber] = MIDDLE_C * Math.pow(STEP_RATIO, noteNumber - C4_INDEX);
+                        } else {
+                            // .tun values are absolute cents above MIDI note 0 (~8.1758 Hz)
+                            frequencies[noteNumber] = 8.1757989156 * Math.pow(2, value / 1200);
                         }
                     }
                 });
 
-                // Validate the parsed data
                 const validCount = frequencies.filter(f => f !== null).length;
-                console.log(`Successfully parsed ${validCount} frequencies`);
-
                 if (validCount === 0) {
-                    console.error('No valid frequencies found in file!');
+                    console.error('No valid frequencies found in tuning file!');
                     return null;
                 }
 
@@ -658,21 +648,27 @@
                     console.error('Invalid frequencies provided to import');
                     return;
                 }
-
-                console.log('Importing new tuning...');
                 this.frequencies = frequencies;
                 this.isCustomTuning = true;
-
-                // Validate the import
-                const validCount = this.frequencies.filter(f => f !== null).length;
-                console.log(`Imported ${validCount} frequencies`);
-                console.log('Custom tuning is now:', this.isCustomTuning);
-                console.log('Sample of active frequencies:', this.frequencies.slice(60, 72));
             },
             resetToDefaultTuning() {
-                console.log('Resetting to default tuning');
                 this.frequencies = new Array(128).fill(null);
                 this.isCustomTuning = false;
+            },
+
+            // Retune all currently-sounding voices to the active tuning
+            refreshActiveVoices() {
+                if (!Synth.audioContext) return;
+                const now = Synth.audioContext.currentTime;
+                Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
+                    const frequency = this.noteToFreq(note);
+                    voice.oscillators.forEach(osc => {
+                        osc.frequency.setValueAtTime(frequency, now);
+                    });
+                    if (voice.fmOsc) {
+                        voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
+                    }
+                });
             },
 
             noteToFreq: function (note) { // Use function keyword to maintain correct 'this' binding
@@ -711,9 +707,7 @@
             arpeggiator: {
                 isOn: false,
                 pattern: 'up',
-                speed: 4, // Default speed (middle of the range 1-8)
                 notes: [],
-                currentIndex: 0,
                 intervalId: null
             },
             cthulhu: {
@@ -741,7 +735,6 @@
                 Q: 0
             },
             wavetable: {
-                frames: [],
                 position: 0,
                 periodicWave: null
             }
@@ -755,6 +748,7 @@
             currentTool: 'draw',
             isDrawing: false,
             lastDrawPoint: null,
+            lineEndPoint: null,
             canvas2D: null,
             ctx2D: null,
             canvas3D: null,
@@ -762,7 +756,6 @@
             rotateX: -30,
             rotateY: 30,
             zoom: 1.5,
-            animationId: null,
             isDragging3D: false,
             lastMouseX: 0,
             lastMouseY: 0,
@@ -1214,7 +1207,9 @@
             startDraw(e) {
                 this.isDrawing = true;
                 this.lastDrawPoint = this.getCanvasPoint(e);
-                this.drawAt(this.lastDrawPoint);
+                if (this.currentTool === 'draw') {
+                    this.drawAt(this.lastDrawPoint);
+                }
             },
 
             draw(e) {
@@ -1228,6 +1223,7 @@
                     }
                     this.lastDrawPoint = point;
                 } else if (this.currentTool === 'line') {
+                    this.lineEndPoint = point;
                     // Preview line
                     this.render2D();
                     const ctx = this.ctx2D;
@@ -1244,12 +1240,12 @@
             },
 
             endDraw() {
-                if (this.isDrawing && this.currentTool === 'line' && this.lastDrawPoint) {
-                    const point = this.lastDrawPoint;
-                    // Line tool - draw the final line
+                if (this.isDrawing && this.currentTool === 'line' && this.lastDrawPoint && this.lineEndPoint) {
+                    this.drawLine(this.lastDrawPoint, this.lineEndPoint);
                 }
                 this.isDrawing = false;
                 this.lastDrawPoint = null;
+                this.lineEndPoint = null;
                 this.render2D();
                 this.render3D();
             },
@@ -1484,12 +1480,7 @@
             },
 
             apply() {
-                // Copy frames to synth state
-                SynthState.wavetable.frames = this.frames.map(f => new Float32Array(f));
-
-                // Create PeriodicWave for current position
                 this.updatePeriodicWave();
-
                 this.close();
             },
 
@@ -1532,30 +1523,11 @@
                 } catch (e) {
                     console.error('Failed to create PeriodicWave:', e);
                 }
-            },
-
-            getInterpolatedFrame(position) {
-                if (this.frames.length === 0) return null;
-
-                const frameIdx = position * (this.frames.length - 1);
-                const lowerIdx = Math.floor(frameIdx);
-                const upperIdx = Math.min(lowerIdx + 1, this.frames.length - 1);
-                const blend = frameIdx - lowerIdx;
-
-                const interpolated = new Float32Array(this.FRAME_SIZE);
-                for (let i = 0; i < this.FRAME_SIZE; i++) {
-                    interpolated[i] = this.frames[lowerIdx][i] * (1 - blend) + this.frames[upperIdx][i] * blend;
-                }
-                return interpolated;
             }
         };
 
         // Utility functions
         const Util = {
-            noteToFreq(note) {
-                // Call noteToFreq directly on TuningSystem instead of using bind
-                return TuningSystem.noteToFreq(note);
-            },
             createNoiseBuffer() {
                 if (!Synth.audioContext) return null;
                 const bufferSize = Synth.audioContext.sampleRate;
@@ -1807,7 +1779,8 @@
                         el.dispatchEvent(new Event('change'));
                     } else {
                         el.value = value;
-                        el.dispatchEvent(new Event('input'));
+                        // Selects listen for 'change', sliders for 'input'
+                        el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input'));
                     }
                 });
 
@@ -2027,13 +2000,19 @@
                 const fmOsc = Synth.audioContext.createOscillator();
                 fmOsc.frequency.setValueAtTime(frequency * 2, now);
                 const fmGain = Synth.audioContext.createGain();
-                fmGain.gain.setValueAtTime(0, now);
+                fmGain.gain.setValueAtTime(SynthState.fmEnabled ? parseFloat(SynthState.controls.fmAmount.value) : 0, now);
+                fmOsc.connect(fmGain);
+                oscillators.forEach(osc => fmGain.connect(osc.frequency));
 
                 const noiseOsc = Synth.audioContext.createBufferSource();
                 noiseOsc.buffer = Util.createNoiseBuffer();
                 noiseOsc.loop = true;
                 const noiseGain = Synth.audioContext.createGain();
                 noiseGain.gain.setValueAtTime(0, now);
+                if (SynthState.noiseEnabled) {
+                    noiseOsc.connect(noiseGain);
+                    noiseGain.connect(SynthState.filterEnabled ? filter : gainNode);
+                }
 
                 const lfo = Synth.audioContext.createOscillator();
                 const lfoGain = Synth.audioContext.createGain();
@@ -2100,13 +2079,14 @@
                     // Update oscillators, unison, and detune
                     const newUnisonCount = parseInt(SynthState.controls.unison.value) || 1;
                     const newDetune = parseFloat(SynthState.controls.detune.value) || 0;
+                    const useWavetable = SynthState.controls.synthMode.value === 'wavetable' && SynthState.wavetable.periodicWave;
 
                     // Adjust the number of oscillators if unison has changed
                     while (oscillators.length < newUnisonCount) {
                         const newOsc = Synth.audioContext.createOscillator();
-                        newOsc.type = SynthState.controls.waveform.value;
                         newOsc.frequency.setValueAtTime(frequency, now);
                         newOsc.start(now);
+                        fmGain.connect(newOsc.frequency);
                         oscillators.push(newOsc);
                     }
                     while (oscillators.length > newUnisonCount) {
@@ -2117,7 +2097,11 @@
 
                     // Update each oscillator
                     oscillators.forEach((osc, i) => {
-                        osc.type = SynthState.controls.waveform.value;
+                        if (useWavetable) {
+                            osc.setPeriodicWave(SynthState.wavetable.periodicWave);
+                        } else {
+                            osc.type = SynthState.controls.waveform.value;
+                        }
                         const detuneAmount = newUnisonCount > 1 ? (i / (newUnisonCount - 1) - 0.5) * newDetune : 0;
                         osc.detune.setValueAtTime(detuneAmount, now);
 
@@ -2141,6 +2125,7 @@
                     if (SynthState.noiseEnabled) {
                         noiseGain.gain.setValueAtTime(parseFloat(SynthState.controls.noiseAmount.value), now);
                         noiseOsc.connect(noiseGain);
+                        noiseGain.disconnect();
                         noiseGain.connect(SynthState.filterEnabled ? filter : gainNode);
                     } else {
                         noiseGain.gain.setValueAtTime(0, now);
@@ -2165,7 +2150,7 @@
                 };
             },
 
-            play(note, isArpeggiator = false) {
+            play(note, isArpeggiator = false, velocity = 1) {
                 if (!Synth.audioContext) return;
                 if (SynthState.cthulhu && SynthState.cthulhu.enabled && !isArpeggiator) {
                     Cthulhu.handleNoteOn(note);
@@ -2185,40 +2170,16 @@
                     const now = Synth.audioContext.currentTime;
                     const attackTime = 0.01;  // Very quick attack
                     const decayTime = 0.1;
-                    const sustainLevel = parseFloat(SynthState.controls.sustain.value) * 0.7;
+                    const sustainLevel = parseFloat(SynthState.controls.sustain.value) * 0.7 * velocity;
 
                     // Main envelope
                     voice.mainGain.gain.setValueAtTime(0, now);
-                    voice.mainGain.gain.linearRampToValueAtTime(1, now + attackTime);
+                    voice.mainGain.gain.linearRampToValueAtTime(velocity, now + attackTime);
                     voice.mainGain.gain.exponentialRampToValueAtTime(sustainLevel + 0.001, now + attackTime + decayTime);
 
                     // Attack noise envelope
-                    voice.attackGain.gain.setValueAtTime(0.3, now);
+                    voice.attackGain.gain.setValueAtTime(0.3 * velocity, now);
                     voice.attackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-
-                    SynthState.activeVoices[note] = voice;
-                    SynthState.activeNotes.add(note);
-                    Synth.recordNoteEvent(note, true);
-
-                    const keyElement = document.querySelector(`.key[data-note="${note}"]`);
-                    if (keyElement) keyElement.classList.add('active');
-                    return;
-                }
-
-                // Special handling for piano voices
-                if (voice.strike) {
-                    const now = Synth.audioContext.currentTime;
-                    const attackTime = Math.min(0.02, parseFloat(SynthState.controls.attack.value));
-                    const decayTime = parseFloat(SynthState.controls.decay.value);
-                    const sustain = parseFloat(SynthState.controls.sustain.value) * 0.5;
-
-                    voice.gainNode.gain.cancelScheduledValues(now);
-                    voice.gainNode.gain.setValueAtTime(0, now);
-                    voice.gainNode.gain.linearRampToValueAtTime(1, now + attackTime);
-                    voice.gainNode.gain.exponentialRampToValueAtTime(sustain + 0.001, now + attackTime + decayTime);
-
-                    voice.strikeGain.gain.setValueAtTime(1, now);
-                    voice.strikeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
 
                     SynthState.activeVoices[note] = voice;
                     SynthState.activeNotes.add(note);
@@ -2248,7 +2209,7 @@
                 const sustainLevel = parseFloat(SynthState.controls.sustain.value);
 
                 // Adjust the peak level based on the number of active voices
-                const peakLevel = 0.5 / Math.max(1, Math.sqrt(Object.keys(SynthState.activeVoices).length));
+                const peakLevel = 0.5 * velocity / Math.max(1, Math.sqrt(Object.keys(SynthState.activeVoices).length));
                 const sustainedLevel = sustainLevel * peakLevel;
 
                 voice.gainNode.gain.linearRampToValueAtTime(peakLevel, now + attackTime);
@@ -2351,6 +2312,7 @@
                     return;
                 }
                 if (SynthState.arpeggiator.isOn && !isArpeggiator) {
+                    SynthState.arpeggiator.notes = [];
                     Arpeggiator.stop();
                     return;
                 }
@@ -2459,7 +2421,7 @@
                 };
             }
         };
-        Voice.stopAllNotes = Voice.stopAllNotes.bind(Voice);
+
         // Arpeggiator functionality
         const Arpeggiator = {
             step: 0,
@@ -2583,7 +2545,6 @@
         };
 
         const Cthulhu = {
-            DEFAULT_STEP: { tones: [], octave: 0, velocity: 1.0, gate: 0.85 },
             initialized: false,
 
             init() {
@@ -2932,13 +2893,13 @@
                 order.forEach((n, i) => {
                     const delay = strumStep * i;
                     if (delay === 0) {
-                        Voice.play(n, true);
+                        Voice.play(n, true, step.velocity);
                         arp.activeNotes.add(n);
                     } else {
                         setTimeout(() => {
                             // Only play if we haven't been stopped in the meantime
                             if (arp.timeoutId === null && !arp.heldNotes.length) return;
-                            Voice.play(n, true);
+                            Voice.play(n, true, step.velocity);
                             arp.activeNotes.add(n);
                         }, delay);
                     }
@@ -3160,18 +3121,6 @@
                 });
             },
 
-            toggleVisualizer() {
-                this.visualizerEnabled = !this.visualizerEnabled;
-                const visualizer = document.getElementById('visualizer');
-                const toggleButton = document.getElementById('toggleVisualizer');
-
-                if (this.visualizerEnabled) {
-                    visualizer.style.display = 'block';
-                    this.updateVisualizer();
-                } else {
-                    visualizer.style.display = 'none';
-                }
-            },
             updateCircularControls() {
                 document.querySelectorAll('.circular-control input[type="range"]').forEach(input => {
                     const value = parseFloat(input.value);
@@ -3276,6 +3225,7 @@
                 // Control event listeners
                 Object.entries(SynthState.controls).forEach(([key, control]) => {
                     if (!control || !control.addEventListener) return;
+                    if (control.tagName === 'BUTTON' || control.type === 'file') return;
                     if (control.type === 'checkbox' || control.tagName === 'SELECT') {
                         control.addEventListener('change', () => Synth.updateParams(key));
                     } else {
@@ -3295,35 +3245,11 @@
                     }
                 });
 
-                SynthState.controls.masterVolume.addEventListener('input', () => Synth.updateParams('masterVolume'));
-                SynthState.controls.masterReverb.addEventListener('input', () => Synth.updateParams('masterReverb'));
-                SynthState.controls.masterDelay.addEventListener('input', () => Synth.updateParams('masterDelay'));
-                SynthState.controls.masterLowEQ.addEventListener('input', () => Synth.updateParams('masterLowEQ'));
-                SynthState.controls.masterMidEQ.addEventListener('input', () => Synth.updateParams('masterMidEQ'));
-                SynthState.controls.masterHighEQ.addEventListener('input', () => Synth.updateParams('masterHighEQ'));
-                SynthState.controls.filterToggle.addEventListener('change', () => Synth.updateParams('filterToggle'));
-                SynthState.controls.arpSpeed.addEventListener('input', Arpeggiator.updateSpeed);
-                SynthState.controls.arpClock.addEventListener('change', Arpeggiator.updateSpeed);
+                SynthState.controls.arpSpeed.addEventListener('input', () => Arpeggiator.updateSpeed());
+                SynthState.controls.arpClock.addEventListener('change', () => Arpeggiator.updateSpeed());
                 SynthState.controls.arpPattern.addEventListener('change', () => {
                     SynthState.arpeggiator.pattern = SynthState.controls.arpPattern.value;
                     Arpeggiator.updateSpeed();
-                });
-                SynthState.controls.noiseToggle.addEventListener('change', () => Synth.updateParams('noiseToggle'));
-                SynthState.controls.noiseAmount.addEventListener('input', () => Synth.updateParams('noiseAmount'));
-                SynthState.controls.lfoToggle.addEventListener('change', () => Synth.updateParams('lfoToggle'));
-                SynthState.controls.lfoRate.addEventListener('input', () => Synth.updateParams('lfoRate'));
-                SynthState.controls.lfoAmount.addEventListener('input', () => Synth.updateParams('lfoAmount'));
-                SynthState.controls.unison.addEventListener('input', () => Synth.updateParams('unison'));
-                SynthState.controls.detune.addEventListener('input', () => Synth.updateParams('detune'));
-                SynthState.controls.waveform.addEventListener('change', () => Synth.updateParams('waveform'));
-                SynthState.controls.pitchBendWheel.addEventListener('input', (e) => {
-                    const bend = parseFloat(e.target.value);
-                    Synth.updatePitchBend(bend);
-                });
-
-                SynthState.controls.pitchBendRange.addEventListener('input', (e) => {
-                    const range = parseInt(e.target.value);
-                    Synth.updatePitchBendRange(range);
                 });
 
                 SynthState.controls.pitchBendWheel.addEventListener('mouseup', (e) => {
@@ -3336,8 +3262,6 @@
                     Synth.updatePitchBend(0);
                 });
 
-                // Add event listener for the new toggle
-                SynthState.controls.whiteKeysOnlyToggle = document.getElementById('whiteKeysOnlyToggle');
                 SynthState.controls.whiteKeysOnlyToggle.addEventListener('change', (e) => {
                     SynthState.whiteKeysOnly = e.target.checked;
                 });
@@ -3399,7 +3323,7 @@
                     }
                 });
                 window.addEventListener('blur', () => Voice.stopAllNotes());
-                window.addEventListener('resize', this.updateVisualizer);
+                window.addEventListener('resize', () => Synth.updateVisualizer());
 
                 document.querySelectorAll('.circular-control').forEach(control => {
                     control.addEventListener('mousedown', this.handleCircularControlInteraction);
@@ -3499,70 +3423,31 @@
                     }
 
                     try {
-                        const response = await fetch(selectedUrls.primary);
-                        if (!response.ok) {
-                            throw new Error('Failed to fetch tuning file');
+                        let tuningContent;
+                        try {
+                            const response = await fetch(selectedUrls.primary);
+                            if (!response.ok) throw new Error('Failed to fetch tuning file');
+                            tuningContent = await response.text();
+                        } catch (primaryError) {
+                            console.error('Primary tuning URL failed, trying backup:', primaryError);
+                            const backupResponse = await fetch(selectedUrls.backup);
+                            if (!backupResponse.ok) throw new Error('Failed to fetch tuning file from backup');
+                            tuningContent = await backupResponse.text();
                         }
 
-                        const tuningContent = await response.text();
-                        const frequencies = TuningSystem.parseTunFile(tuningContent, selectedTuning);  // Pass the selected tuning type
-
+                        const frequencies = TuningSystem.parseTunFile(tuningContent, selectedTuning);
                         if (!frequencies) {
                             console.error('Failed to parse tuning file');
                             return;
                         }
 
                         TuningSystem.importTuning(frequencies);
-
-                        // Update all active voices with new tuning
-                        Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
-                            const frequency = TuningSystem.noteToFreq(note);
-                            const now = Synth.audioContext.currentTime;
-                            voice.oscillators.forEach(osc => {
-                                osc.frequency.setValueAtTime(frequency, now);
-                            });
-                            if (voice.fmOsc) {
-                                voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
-                            }
-                        });
-
+                        TuningSystem.refreshActiveVoices();
                     } catch (error) {
                         console.error('Error loading tuning preset:', error);
-                        // Try backup URL if primary fails
-                        try {
-                            const backupResponse = await fetch(selectedUrls.backup);
-                            if (!backupResponse.ok) {
-                                throw new Error('Failed to fetch tuning file from backup');
-                            }
-
-                            const tuningContent = await backupResponse.text();
-                            const frequencies = TuningSystem.parseTunFile(tuningContent, selectedTuning);
-
-                            if (!frequencies) {
-                                console.error('Failed to parse tuning file from backup');
-                                return;
-                            }
-
-                            TuningSystem.importTuning(frequencies);
-
-                            // Update all active voices with new tuning
-                            Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
-                                const frequency = TuningSystem.noteToFreq(note);
-                                const now = Synth.audioContext.currentTime;
-                                voice.oscillators.forEach(osc => {
-                                    osc.frequency.setValueAtTime(frequency, now);
-                                });
-                                if (voice.fmOsc) {
-                                    voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
-                                }
-                            });
-
-                        } catch (backupError) {
-                            console.error('Error loading tuning preset from backup:', backupError);
-                            alert('Failed to load tuning preset. Please try again later.');
-                            e.target.value = ''; // Reset to default
-                            TuningSystem.resetToDefaultTuning();
-                        }
+                        alert('Failed to load tuning preset. Please try again later.');
+                        e.target.value = ''; // Reset to default
+                        TuningSystem.resetToDefaultTuning();
                     }
                 });
             }
@@ -3585,6 +3470,7 @@
             masterHighEQ: null,
             visualizerEnabled: true,
             visualizerMode: 'lissajous',
+            visualizerToken: 0,
 
             initialize() {
                 // Show piano immediately behind modal
@@ -3592,43 +3478,6 @@
 
                 const startButton = document.getElementById('startButton');
                 const startModal = document.getElementById('startModal');
-                const exportWavButton = document.getElementById('exportWavButton');
-                exportWavButton.addEventListener('click', () => this.exportWav());
-
-                // Initialize tuning controls early
-                SynthState.controls.tuningPreset = document.getElementById('tuningPreset');
-                const applyTuningButton = document.getElementById('applyTuning');
-                const resetTuningButton = document.getElementById('resetTuning');
-                const tuningFileInput = document.getElementById('tuningFile');
-
-                // Make sure the apply button starts disabled
-                if (applyTuningButton) {
-                    applyTuningButton.disabled = true;
-                }
-
-                // Set up tuning file input handler
-                if (tuningFileInput) {
-                    tuningFileInput.addEventListener('change', (event) => {
-                        const file = event.target.files[0];
-                        if (!file) {
-                            console.log('No file selected');
-                            applyTuningButton.disabled = true;
-                            return;
-                        }
-
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            loadedTuningContent = e.target.result;
-                            console.log('Tuning file loaded:', loadedTuningContent.substring(0, 100) + '...');
-                            applyTuningButton.disabled = false;
-                        };
-                        reader.onerror = (error) => {
-                            console.error('Error reading file:', error);
-                            applyTuningButton.disabled = true;
-                        };
-                        reader.readAsText(file);
-                    });
-                }
 
                 startButton.addEventListener('click', () => {
                     this.initAudioContext();
@@ -3636,25 +3485,14 @@
                     this.start();
                 });
 
-                const recordButton = document.getElementById('recordButton');
-                const stopButton = document.getElementById('stopButton');
-                const saveButton = document.getElementById('saveButton');
-                const loadButton = document.getElementById('loadButton');
-                const playButton = document.getElementById('playButton');
-
-                recordButton.addEventListener('click', () => this.startRecording());
-                stopButton.addEventListener('click', () => this.stopRecording());
-                saveButton.addEventListener('click', () => this.saveRecording());
-                loadButton.addEventListener('click', () => this.loadRecording());
-                playButton.addEventListener('click', () => this.playRecording());
-
-                // Initialize pitch bend controls
-                SynthState.controls.pitchBendWheel = document.getElementById('pitchBendWheel');
-                SynthState.controls.pitchBendRange = document.getElementById('pitchBendRange');
+                document.getElementById('recordButton').addEventListener('click', () => this.startRecording());
+                document.getElementById('stopButton').addEventListener('click', () => this.stopRecording());
+                document.getElementById('saveButton').addEventListener('click', () => this.saveRecording());
+                document.getElementById('loadButton').addEventListener('click', () => this.loadRecording());
+                document.getElementById('playButton').addEventListener('click', () => this.playRecording());
+                document.getElementById('exportWavButton').addEventListener('click', () => this.exportWav());
             },
             start() {
-                console.log('Synth start initiated...');
-
                 // Initialize all controls
                 SynthState.controls = {
                     synthMode: document.getElementById('synthMode'),
@@ -3702,24 +3540,17 @@
                 SynthState.controls.noiseToggle.checked = SynthState.noiseEnabled;
                 SynthState.controls.applyTuning.disabled = true;
 
-                console.log('Setting up tuning controls...');
-
                 // Setup tuning file handler
                 SynthState.controls.tuningFile.addEventListener('change', (event) => {
                     const file = event.target.files[0];
                     if (!file) {
-                        console.log('No file selected');
                         SynthState.controls.applyTuning.disabled = true;
                         return;
                     }
 
-                    console.log('File selected:', file.name);
-                    loadedFileName = file.name;
-
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         loadedTuningContent = e.target.result;
-                        console.log('Tuning file loaded:', loadedTuningContent.substring(0, 100) + '...');
                         SynthState.controls.applyTuning.disabled = false;
                     };
                     reader.onerror = (e) => {
@@ -3731,69 +3562,25 @@
 
                 // Setup apply tuning handler
                 SynthState.controls.applyTuning.addEventListener('click', () => {
-                    console.log('Apply button clicked!');
+                    if (!loadedTuningContent) return;
 
-                    if (!loadedTuningContent) {
-                        console.error('No tuning content to apply');
-                        return;
-                    }
-
-                    console.log('Processing tuning file...');
-
-                    // Parse and apply the tuning
                     const frequencies = TuningSystem.parseTunFile(loadedTuningContent);
                     if (!frequencies) {
                         console.error('Failed to parse frequencies from file');
                         return;
                     }
 
-                    console.log('Parsed frequencies preview:', frequencies.slice(60, 72));
-
-                    // Import the tuning
                     TuningSystem.importTuning(frequencies);
-
-                    console.log('Tuning system state after import:');
-                    console.log('- isCustomTuning:', TuningSystem.isCustomTuning);
-                    console.log('- Has frequencies:', TuningSystem.frequencies.some(f => f !== null));
-
-                    // Update all active voices
-                    Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
-                        const frequency = TuningSystem.noteToFreq(note);
-                        console.log(`Updating voice ${note} to ${frequency}Hz`);
-                        const now = Synth.audioContext.currentTime;
-
-                        voice.oscillators.forEach(osc => {
-                            osc.frequency.setValueAtTime(frequency, now);
-                        });
-
-                        if (voice.fmOsc) {
-                            voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
-                        }
-                    });
-
-                    console.log('Tuning update complete!');
+                    TuningSystem.refreshActiveVoices();
                 });
 
                 // Setup reset tuning handler
                 SynthState.controls.resetTuning.addEventListener('click', () => {
-                    console.log('Resetting to default tuning');
                     TuningSystem.resetToDefaultTuning();
                     loadedTuningContent = null;
-                    loadedFileName = null;
                     SynthState.controls.applyTuning.disabled = true;
                     SynthState.controls.tuningFile.value = '';
-
-                    // Reset all active voices
-                    Object.entries(SynthState.activeVoices).forEach(([note, voice]) => {
-                        const frequency = TuningSystem.noteToFreq(note);
-                        const now = Synth.audioContext.currentTime;
-                        voice.oscillators.forEach(osc => {
-                            osc.frequency.setValueAtTime(frequency, now);
-                        });
-                        if (voice.fmOsc) {
-                            voice.fmOsc.frequency.setValueAtTime(frequency * 2, now);
-                        }
-                    });
+                    TuningSystem.refreshActiveVoices();
                 });
 
                 // Setup pitch bend range controls
@@ -3814,8 +3601,7 @@
                 this.updateMasterDelay();
                 this.updateMasterEQ();
 
-                // Initialize UI
-                UI.createPiano();
+                // Initialize UI (piano was already created behind the start modal)
                 UI.initializeEventListeners();
                 this.updateVisualizer();
                 this.updateParams();
@@ -3847,8 +3633,6 @@
                         });
                     });
                 }
-
-                console.log('Synth initialization complete');
             },
             initAudioContext() {
                 this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -4062,6 +3846,11 @@
             startRecording() {
                 this.recordedChunks = [];
                 this.recordedNotes = [];
+                // Discard any previous recording's playback objects so Play uses the new take
+                if (this.playbackAudio) this.playbackAudio.pause();
+                if (this.playbackSource) this.playbackSource.disconnect();
+                this.playbackAudio = null;
+                this.playbackSource = null;
                 this.recordingStartTime = this.audioContext.currentTime;
                 const stream = this.createMediaStreamFromAudioGraph();
                 this.recorder = new MediaRecorder(stream);
@@ -4106,22 +3895,17 @@
 
                 this.playbackAudio.play().then(() => {
                     this.animatePlayback();
-                    UI.updateVisualizer();
+                    this.updateVisualizer();
                 }).catch(error => {
                     console.error('Error playing audio:', error);
                 });
             },
 
-            stopPlayback() {
-                if (this.playbackAudio) {
-                    this.playbackAudio.pause();
-                    this.playbackAudio.currentTime = 0;
-                }
-                document.querySelectorAll('.key.active').forEach(key => key.classList.remove('active'));
-            },
-
             updateVisualizer() {
                 if (!this.analyser || !this.visualizerEnabled) return;
+
+                // Invalidate any previously running draw loop
+                const token = ++this.visualizerToken;
 
                 const visualizer = document.getElementById('visualizer');
                 const width = visualizer.offsetWidth;
@@ -4199,7 +3983,7 @@
                 };
 
                 const draw = () => {
-                    if (!synth.visualizerEnabled) return;
+                    if (!synth.visualizerEnabled || synth.visualizerToken !== token) return;
 
                     requestAnimationFrame(draw);
 
@@ -4323,7 +4107,12 @@
 
                         if (this.playbackAudio) {
                             this.playbackAudio.pause();
-                            this.playbackAudio.currentTime = 0;
+                        }
+                        // Drop the media source tied to the old audio element so the
+                        // loaded recording gets routed through the FX chain too
+                        if (this.playbackSource) {
+                            this.playbackSource.disconnect();
+                            this.playbackSource = null;
                         }
                         this.playbackAudio = new Audio(data.audio);
                         this.recordedChunks = [];
@@ -4347,6 +4136,8 @@
             getPresets() {
                 const presets = {};
                 for (const [key, control] of Object.entries(SynthState.controls)) {
+                    // Buttons carry no state and file inputs can't be restored
+                    if (control.tagName === 'BUTTON' || control.type === 'file') continue;
                     presets[key] = control.type === 'checkbox' ? control.checked : control.value;
                 }
                 return presets;
@@ -4355,14 +4146,13 @@
             setPresets(presets) {
                 for (const [key, value] of Object.entries(presets)) {
                     const control = SynthState.controls[key];
-                    if (control) {
-                        if (control.type === 'checkbox') {
-                            control.checked = value;
-                        } else {
-                            control.value = value;
-                        }
-                        this.updateParams(key);
+                    if (!control || control.tagName === 'BUTTON' || control.type === 'file') continue;
+                    if (control.type === 'checkbox') {
+                        control.checked = value;
+                    } else {
+                        control.value = value;
                     }
+                    this.updateParams(key);
                 }
             },
 
@@ -4452,7 +4242,7 @@
                 for (let i = 0; i < length; i++) {
                     for (let channel = 0; channel < numChannels; channel++) {
                         let sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
-                        sample = sample < 0 ? sample * 0x7FFFFF : sample * 0x7FFFFF;
+                        sample = Math.round(sample * 0x7FFFFF);
                         view.setInt24(offset, sample, true);
                         offset += 3;
                     }
