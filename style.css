@@ -934,7 +934,11 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  width: auto;
+  height: 40px;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
   font-weight: 600;
 }
 .cthulhu-trigger-btn.cthulhu-active {

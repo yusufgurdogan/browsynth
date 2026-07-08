@@ -1941,23 +1941,25 @@
                             enabled: true,
                             arp: {
                                 latch: false, bpm: 138, rate: '1/16', length: 16, swing: 0, strum: 0,
+                                // Rolling up-down contour through the held chord;
+                                // tones past the chord size wrap into the next octave
                                 steps: [
-                                    { tones: [1], octave: 0, velocity: 1, gate: 0.6 },
-                                    { tones: [1], octave: 1, velocity: 0.7, gate: 0.5 },
-                                    { tones: [2], octave: 0, velocity: 0.85, gate: 0.5 },
-                                    { tones: [1], octave: 1, velocity: 0.7, gate: 0.5 },
-                                    { tones: [3], octave: 0, velocity: 1, gate: 0.6 },
-                                    { tones: [2], octave: 1, velocity: 0.7, gate: 0.5 },
-                                    { tones: [1], octave: 0, velocity: 0.85, gate: 0.5 },
-                                    { tones: [3], octave: 1, velocity: 0.7, gate: 0.5 },
-                                    { tones: [2], octave: 0, velocity: 1, gate: 0.6 },
-                                    { tones: [1], octave: 1, velocity: 0.7, gate: 0.5 },
+                                    { tones: [1], octave: 0, velocity: 1, gate: 0.65 },
+                                    { tones: [2], octave: 0, velocity: 0.75, gate: 0.5 },
                                     { tones: [3], octave: 0, velocity: 0.85, gate: 0.5 },
-                                    { tones: [2], octave: 1, velocity: 0.7, gate: 0.5 },
-                                    { tones: [4], octave: 0, velocity: 1, gate: 0.6 },
-                                    { tones: [3], octave: 1, velocity: 0.7, gate: 0.5 },
-                                    { tones: [2], octave: 0, velocity: 0.85, gate: 0.5 },
-                                    { tones: [4], octave: 1, velocity: 0.7, gate: 0.5 }
+                                    { tones: [4], octave: 0, velocity: 0.75, gate: 0.5 },
+                                    { tones: [3], octave: 0, velocity: 1, gate: 0.65 },
+                                    { tones: [2], octave: 0, velocity: 0.75, gate: 0.5 },
+                                    { tones: [1], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [2], octave: 0, velocity: 0.75, gate: 0.5 },
+                                    { tones: [3], octave: 0, velocity: 1, gate: 0.65 },
+                                    { tones: [4], octave: 0, velocity: 0.75, gate: 0.5 },
+                                    { tones: [5], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [4], octave: 0, velocity: 0.75, gate: 0.5 },
+                                    { tones: [3], octave: 0, velocity: 1, gate: 0.65 },
+                                    { tones: [2], octave: 0, velocity: 0.75, gate: 0.5 },
+                                    { tones: [1], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [3], octave: 0, velocity: 0.75, gate: 0.5 }
                                 ]
                             }
                         }
@@ -1981,6 +1983,102 @@
                         masterVolume: '0.45', masterReverb: '0.25', masterDelay: '0.15',
                         globalBpm: '140', delayDivision: '1/8',
                         chorusAmount: '0.5', driveAmount: '0.35'
+                    }),
+                    'HT Hard Bass': p({
+                        waveform: 'sawtooth',
+                        filterCutoff: '8300', filterResonance: '3', filterEnvAmount: '0.35',
+                        attack: '0.001', decay: '0.14', sustain: '0.8', release: '0.05',
+                        masterVolume: '0.5', driveAmount: '0.45',
+                        globalBpm: '150',
+                        sidechainToggle: true, sidechainAmount: '0.97', sidechainRelease: '0.2',
+                        kickToggle: true,
+                        masterLowEQ: '4', masterMidEQ: '1', masterHighEQ: '-1'
+                    }),
+                    'HT Arp Bass': p({
+                        waveform: 'sawtooth',
+                        filterCutoff: '9330', filterResonance: '4', filterEnvAmount: '0.5',
+                        attack: '0.001', decay: '0.12', sustain: '0.3', release: '0.06',
+                        masterVolume: '0.55', driveAmount: '0.3',
+                        globalBpm: '150',
+                        sidechainToggle: true, sidechainAmount: '0.85', sidechainRelease: '0.22',
+                        kickToggle: true,
+                        masterLowEQ: '3',
+                        __cthulhu: {
+                            enabled: true,
+                            arp: {
+                                latch: false, bpm: 150, rate: '1/16', length: 16, swing: 0, strum: 0,
+                                // Root/octave gallop — hold one note and it drives itself
+                                steps: [
+                                    { tones: [1], octave: 0, velocity: 1, gate: 0.5 },
+                                    { tones: [1], octave: 1, velocity: 0.75, gate: 0.4 },
+                                    { tones: [1], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [1], octave: 1, velocity: 0.75, gate: 0.4 },
+                                    { tones: [1], octave: 0, velocity: 1, gate: 0.5 },
+                                    { tones: [1], octave: 1, velocity: 0.75, gate: 0.4 },
+                                    { tones: [1], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [2], octave: 0, velocity: 0.8, gate: 0.45 },
+                                    { tones: [1], octave: 0, velocity: 1, gate: 0.5 },
+                                    { tones: [1], octave: 1, velocity: 0.75, gate: 0.4 },
+                                    { tones: [1], octave: 0, velocity: 0.85, gate: 0.5 },
+                                    { tones: [1], octave: 1, velocity: 0.75, gate: 0.4 },
+                                    { tones: [1], octave: 0, velocity: 1, gate: 0.5 },
+                                    { tones: [1], octave: 1, velocity: 0.75, gate: 0.4 },
+                                    { tones: [2], octave: 0, velocity: 0.85, gate: 0.45 },
+                                    { tones: [2], octave: 1, velocity: 0.75, gate: 0.4 }
+                                ]
+                            }
+                        }
+                    }),
+                    'HT Neo Y2K Pluck': p({
+                        waveform: 'sine',
+                        fmToggle: true, fmAmount: '250',
+                        attack: '0.001', decay: '0.35', sustain: '0', release: '0.4',
+                        masterVolume: '0.55', masterReverb: '0.35', masterDelay: '0.3',
+                        globalBpm: '160', delayDivision: '1/16', delayFeedback: '0.5',
+                        chorusAmount: '0.15',
+                        masterHighEQ: '3'
+                    }),
+                    'HT Alphazone Lead': p({
+                        waveform: 'sawtooth', unison: '7', detune: '40',
+                        stereoSpread: '0.85', unisonBlend: '0.9',
+                        filterCutoff: '16520', filterResonance: '2', filterEnvAmount: '0.1',
+                        attack: '0.005', decay: '0.2', sustain: '0.85', release: '0.3',
+                        masterVolume: '0.35', masterReverb: '0.3', masterDelay: '0.18',
+                        globalBpm: '150', delayDivision: '1/8D', delayFeedback: '0.4',
+                        chorusAmount: '0.2', driveAmount: '0.4',
+                        sidechainToggle: true, sidechainAmount: '0.6', sidechainRelease: '0.25',
+                        masterMidEQ: '2', masterHighEQ: '2'
+                    }),
+                    'HT Euphoria Gate': p({
+                        waveform: 'sawtooth', unison: '8', detune: '30',
+                        stereoSpread: '1',
+                        filterCutoff: '15350', filterResonance: '1',
+                        attack: '0.15', decay: '0.4', sustain: '0.85', release: '0.8',
+                        masterVolume: '0.45', masterReverb: '0.5', masterDelay: '0.15',
+                        globalBpm: '150',
+                        chorusAmount: '0.4',
+                        gateToggle: true, gateRate: '1/16', gateDepth: '1', gateSmooth: '0.008',
+                        sidechainToggle: true, sidechainAmount: '0.6', sidechainRelease: '0.25',
+                        __gate: { pattern: [1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1] }
+                    }),
+                    'HT Sub Bass': p({
+                        waveform: 'sine',
+                        attack: '0.002', decay: '0.1', sustain: '1', release: '0.08',
+                        masterVolume: '0.75',
+                        globalBpm: '150',
+                        sidechainToggle: true, sidechainAmount: '0.9', sidechainRelease: '0.25',
+                        kickToggle: true,
+                        masterLowEQ: '3'
+                    }),
+                    'HT Riser': p({
+                        waveform: 'sawtooth', unison: '4', detune: '40',
+                        stereoSpread: '0.8',
+                        filterCutoff: '11335', filterResonance: '6', filterEnvAmount: '0.4',
+                        attack: '2', decay: '1', sustain: '1', release: '2',
+                        lfoToggle: true, lfoRate: '6', lfoAmount: '400',
+                        noiseToggle: true, noiseAmount: '0.5',
+                        masterVolume: '0.45', masterReverb: '0.6', masterDelay: '0.3',
+                        globalBpm: '155', delayDivision: '1/8', delayFeedback: '0.6'
                     })
                 };
             },
