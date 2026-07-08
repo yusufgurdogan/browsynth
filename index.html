@@ -3087,9 +3087,12 @@
                     ]
                 },
                 'strobe-six': {
+                    // deadmau5's 6,6,7,6,6,8 contour, voiced down to tones 3-5 —
+                    // his chords had 7 notes so "6th highest" was mid-register;
+                    // over a small held chord the literal tones scream too high
                     rate: '1/16', length: 6, swing: 0, steps: [
-                        [[6], 0, 1.0, 0.5], [[6], 0, 0.8, 0.5], [[7], 0, 0.85, 0.5],
-                        [[6], 0, 0.8, 0.5], [[6], -2, 0.9, 0.5], [[8], 0, 0.85, 0.5]
+                        [[3], 0, 1.0, 0.5], [[3], 0, 0.8, 0.5], [[4], 0, 0.85, 0.5],
+                        [[3], 0, 0.8, 0.5], [[3], -2, 0.9, 0.5], [[5], 0, 0.85, 0.5]
                     ]
                 },
                 'rolling-bass': {
@@ -3278,7 +3281,10 @@
                         const n = arp.heldNotes.length;
                         const toneIdx = tone - 1;
                         const wrapped = ((toneIdx % n) + n) % n;
-                        const octWrap = Math.floor(toneIdx / n);
+                        // Wrap past the chord size into higher octaves, but never
+                        // more than +2 — tone 6 over a single held note must not
+                        // end up 5 octaves up in dog-whistle territory
+                        const octWrap = Math.min(2, Math.floor(toneIdx / n));
                         const baseNote = arp.heldNotes[wrapped];
                         if (baseNote) notesToPlay.push(CthulhuConfig.shiftOctave(baseNote, octWrap));
                     }
