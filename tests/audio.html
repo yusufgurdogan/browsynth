@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Browsynth audio regression checks</title>
+<style>body{background:#181d16;color:#dfe8d7;font:15px/1.6 monospace;margin:40px;max-width:1000px}button{padding:12px 20px;cursor:pointer}pre{white-space:pre-wrap}.pass{color:#c4ed94}.fail{color:#f4ab94}iframe{position:absolute;left:-10000px;top:0;width:1440px;height:1000px;border:0}</style>
+<h1>Audio & playing checks</h1><p>Check international keyboards and tempo, render every factory patch at 48 kHz, then check gate timing, tuning and PCM export. No sound is sent to your speakers.</p>
+<button id="run" disabled>Run audio checks</button><pre id="results" aria-live="polite">Loading instrument…</pre>
+<iframe id="instrument" src="../?test=1" title="Isolated test instrument"></iframe><script src="interaction.js"></script><script src="instruments.js"></script><script src="audio.js"></script></html>
